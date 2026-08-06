@@ -36,14 +36,18 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   go_router: ^17.4.0
-  # Pinned to 2.x: Riverpod 3 pulls in test ^1.x ranges that conflict with isar_generator.
-  flutter_riverpod: ^2.6.1
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  # Pinned with riverpod_annotation/generator for analyzer ^9 compatibility
+  # with isar_community_generator 3.3.2 (see Sprint 0 Section 3 verification).
+  flutter_riverpod: 3.2.1
+  riverpod_annotation: 4.0.2
+  isar_community: 3.3.2
+  isar_community_flutter_libs: 3.3.2
   path_provider: ^2.1.6
-  # freezed 2.5.2 / isar_generator share source_gen ^1.x and analyzer <6.
-  freezed_annotation: ^2.4.4
-  json_annotation: '>=4.9.0 <4.10.0'
+  supabase_flutter: ^2.17.1
+  uuid: ^4.6.0
+  # freezed 3.2.4 / json_serializable 6.12.0 share analyzer ^9 with the stack above.
+  freezed_annotation: 3.1.0
+  json_annotation: '>=4.10.0 <4.11.0'
 
 dev_dependencies:
   flutter_test:
@@ -55,12 +59,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  # <2.4.14 keeps dart_style/analyzer in range for isar_generator.
-  build_runner: '>=2.4.0 <2.4.14'
-  freezed: 2.5.2
-  isar_generator: ^3.1.0+1
-  # 6.8.x uses source_gen ^1.x (compatible with isar_generator).
-  json_serializable: 6.8.0
+  # <2.15.2 avoids build_runner's analyzer ^13 bump that breaks isar_community_generator.
+  build_runner: '>=2.12.0 <2.15.2'
+  riverpod_generator: 4.0.3
+  freezed: 3.2.4
+  isar_community_generator: 3.3.2
+  json_serializable: 6.12.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
