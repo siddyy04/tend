@@ -19,7 +19,7 @@ Future<void> main() async {
     runApp(
       ProviderScope(
         overrides: [
-          if (isar != null) isarProvider.overrideWithValue(isar),
+          isarProvider.overrideWithValue(isar),
         ],
         child: const App(),
       ),

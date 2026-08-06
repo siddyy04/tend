@@ -1,49 +1,53 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'collections/connection.dart';
+import 'collections/follow_up.dart';
+import 'collections/memory.dart';
+import 'collections/person.dart';
+import 'collections/suggestion_log_entry.dart';
+
+/// All Isar collection schemas from SCHEMA.md.
+///
+/// Passed to [initializeIsar] so the database fails fast if open cannot succeed.
+final List<CollectionSchema<dynamic>> tendIsarSchemas = [
+  PersonSchema,
+  MemorySchema,
+  FollowUpSchema,
+  SuggestionLogEntrySchema,
+  ConnectionSchema,
+];
 
 /// Riverpod access to the opened Isar instance.
 ///
-/// Overridden in [main] after [initializeIsar] succeeds with schemas.
-/// Remains `null` during bootstrap until the data model layer registers
-/// collection schemas (Isar requires at least one schema to open).
-final isarProvider = Provider<Isar?>((ref) => null);
+/// Must be overridden in [main] after a successful [initializeIsar].
+/// Reading without an override is a programming error.
+final isarProvider = Provider<Isar>((ref) {
+  throw StateError(
+    'Isar has not been initialized. '
+    'Call initializeIsar() in main and override isarProvider.',
+  );
+});
 
-/// Application documents directory used for the Tend Isar database file.
-Future<String> _isarDirectoryPath() async {
-  final dir = await getApplicationDocumentsDirectory();
-  return dir.path;
-}
-
-/// Initializes local Isar storage.
+/// Opens the local Isar database with [tendIsarSchemas].
 ///
-/// [schemas] must be non-empty for a real [Isar] instance (Isar enforces this).
-/// During this bootstrap step, schemas are not registered yet — this function
-/// still verifies the documents directory is reachable and returns `null`.
-/// The data model step will call this again (or extend it) with SCHEMA.md
-/// collection schemas so [Isar.open] can complete.
-Future<Isar?> initializeIsar({
-  List<CollectionSchema<dynamic>> schemas = const [],
+/// Throws if schemas are empty or if [Isar.open] fails — the app must not
+/// continue without a working database.
+Future<Isar> initializeIsar({
+  List<CollectionSchema<dynamic>>? schemas,
 }) async {
-  final directory = await _isarDirectoryPath();
-
-  if (schemas.isEmpty) {
-    // Directory probe only — proves path_provider + storage access work.
-    // Real open is deferred until collections/codegen exist.
-    assert(() {
-      debugPrint(
-        'Isar bootstrap: directory ready at $directory '
-        '(open deferred until schemas are registered).',
-      );
-      return true;
-    }());
-    return null;
+  final effectiveSchemas = schemas ?? tendIsarSchemas;
+  if (effectiveSchemas.isEmpty) {
+    throw StateError(
+      'Isar initialization failed: no collection schemas registered.',
+    );
   }
 
+  final dir = await getApplicationDocumentsDirectory();
   return Isar.open(
-    schemas,
-    directory: directory,
+    effectiveSchemas,
+    directory: dir.path,
     name: 'tend',
   );
 }
