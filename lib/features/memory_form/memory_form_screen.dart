@@ -12,12 +12,16 @@ class MemoryFormScreen extends ConsumerStatefulWidget {
     super.key,
     required this.personUuid,
     this.memoryUuid,
+    this.initialEventText,
   });
 
   final String personUuid;
 
   /// `null` = create; non-null = edit that memory (uuid, never Isar id).
   final String? memoryUuid;
+
+  /// Optional create-mode prefill (e.g. capture fallback).
+  final String? initialEventText;
 
   @override
   ConsumerState<MemoryFormScreen> createState() => _MemoryFormScreenState();
@@ -31,6 +35,7 @@ class _MemoryFormScreenState extends ConsumerState<MemoryFormScreen> {
   MemoryFormArgs get _args => (
         personUuid: widget.personUuid,
         memoryUuid: widget.memoryUuid,
+        initialEventText: widget.initialEventText,
       );
 
   @override

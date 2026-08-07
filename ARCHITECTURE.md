@@ -2,19 +2,21 @@
 
 **Status:** Accepted
 **Applies to:** all implementation work from Sprint 0 onward
-**How to use this with Cursor:** paste this whole file into the repo as `ARCHITECTURE.md` and treat it as binding. Prompt pattern: *"Follow ARCHITECTURE.md exactly — if a task requires deviating from it, stop and ask rather than improvising."* Business logic must never import a vendor SDK (Gemma, Supabase) directly outside the specific provider/repository files named below.
+**How to use this with Cursor:** paste this whole file into the repo as `ARCHITECTURE.md` and treat it as binding. Prompt pattern: *"Follow ARCHITECTURE.md exactly — if a task requires deviating from it, stop and ask rather than improvising."* Business logic must never import a vendor SDK (`flutter_gemma` / LiteRT bridge, Supabase) directly outside the specific provider/repository files named below.
+
+**Supersession note (ADR-010 / ADR-011):** Concrete MVP extraction is a **model-agnostic LiteRT** layer (`lib/ai/providers/litert/`) with **Gemma 4 E2B** as the default catalog model via **LiteRT-LM** (`.litertlm`). Optional **Gemma 4 E4B** is catalog-listed for capable devices. Historical “Gemma 3n” / Qwen / MediaPipe `.task` wording below is superseded for the active runtime; treat ADR-011 + `ModelCatalog` as authoritative.
 
 ---
 
 ## 0. Summary of the decision
 
-Isar (via `isar_community`) is the single source of truth on-device. All AI (extraction, embeddings) runs locally through a swappable provider interface, currently backed by Gemma 3n. Supabase is demoted to authentication + optional, opt-in, encrypted backup/sync — never a dependency for core app function. No OpenAI, no pgvector, no server-side inference for MVP.
+Isar (via `isar_community`) is the single source of truth on-device. All AI (extraction, embeddings) runs locally through a swappable provider interface, backed by a **LiteRT-LM** runtime with the active model selected via `ModelCatalog` (MVP: Gemma 4 E2B; optional E4B — see ADR-011). Supabase is demoted to authentication + optional, opt-in, encrypted backup/sync — never a dependency for core app function. No OpenAI, no pgvector, no server-side inference for MVP.
 
 | Layer | Choice | Role |
 |---|---|---|
 | Local database | Isar (`isar_community` fork) | Source of truth, works fully offline |
 | State management | Riverpod (code-gen) | All business logic, no logic in widgets |
-| AI inference | Gemma 3n E2B on-device (via `flutter_gemma`), behind an abstract provider interface | Extraction + embeddings |
+| AI inference | On-device LiteRT-LM (via `flutter_gemma` + `flutter_gemma_litertlm`), behind an abstract provider interface; model chosen by `ModelCatalog` (MVP: Gemma 4 E2B) | Extraction + embeddings |
 | ASR (voice-to-text) | Platform-native speech-to-text | Not the LLM — see Section 6 for why |
 | OCR (screenshots) | Platform-native on-device OCR (ML Kit / Vision) | Not the LLM — see Section 6 for why |
 | Backend | Supabase | Auth + optional backup/sync only |
@@ -34,8 +36,8 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 │                                │      (Extraction / Embedding /     │
 │                                │       Transcription / OCR)         │
 │                                │        │                           │
-│                                │        └──> Gemma 3n (on-device,   │
-│                                │             flutter_gemma)         │
+│                                │        └──> LiteRT LLM (on-device, │
+│                                │             flutter_gemma bridge)  │
 │                                │                                    │
 │                                └──> Sync Engine (background)        │
 │                                       │                             │
@@ -52,7 +54,7 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 **Capture flow (the core loop, must stay under 10 seconds):**
 1. User triggers capture (voice/text/photo/share-sheet).
 2. Voice → platform ASR → text. Photo → platform OCR → text.
-3. Text goes to the local `ExtractionProvider` (Gemma 3n via function calling).
+3. Text goes to the local `ExtractionProvider` (LiteRT model via function calling).
 4. Extraction result (matching the Deliverable 5 JSON schema exactly) is validated: confidence thresholds, grounding-quote check, taxonomy check — all unchanged from the original design.
 5. Result written to a Riverpod state → confirmation card renders → user confirms/edits.
 6. On confirm: write to Isar (`memories` collection), `syncStatus = pending`, `updatedAt = now()`.
@@ -98,12 +100,14 @@ lib/
       embedding_provider.dart      # abstract interface
       transcription_provider.dart  # abstract interface
       ocr_provider.dart            # abstract interface
-      gemma/
-        gemma_extraction_provider.dart   # concrete Gemma 3n implementation
-        gemma_embedding_provider.dart
+      litert/
+        litert_extraction_provider.dart  # concrete LiteRT extraction (catalog model)
+        litert_inference_adapter.dart    # sole flutter_gemma import
+        litert_prompt_builder.dart
       manual/
         manual_fallback_provider.dart    # no-AI fallback for unsupported devices
     model_manager/
+      model_catalog.dart           # active model + displayName / install kinds
       model_download_manager.dart  # download, verify, version check
       device_capability_check.dart
   features/
@@ -116,7 +120,7 @@ lib/
   main.dart
 ```
 
-**Rule for Cursor:** nothing outside `ai/providers/gemma/` may import `flutter_gemma`. Nothing outside `data/local/isar/` and `domain/repositories/` may import Isar directly. This is what makes Section 6's provider swap and any future database swap actually possible instead of theoretical.
+**Rule for Cursor:** nothing outside `ai/providers/litert/litert_inference_adapter.dart` may import `flutter_gemma`. Nothing outside `data/local/isar/` and `domain/repositories/` may import Isar directly. This is what makes Section 6's provider swap and any future database swap actually possible instead of theoretical.
 
 ---
 
@@ -274,10 +278,10 @@ abstract class OCRProvider {
 ```
 
 Concrete implementations live behind these interfaces:
-- `GemmaExtractionProvider`, `GemmaEmbeddingProvider` — Gemma 3n via `flutter_gemma`, using its native **function-calling mode** to enforce the Deliverable 5 JSON schema (this is a materially better fit than prompt-and-hope-it's-valid-JSON, and it's the on-device equivalent of what OpenAI function calling did in the original design).
+- `LiteRtExtractionProvider` — on-device LiteRT-LM via `flutter_gemma`, using **function-calling mode** to enforce the Deliverable 5 JSON schema. Which weights run is decided by `ModelCatalog` (MVP: Gemma 4 E2B), not by Capture/Confirmation.
 - `PlatformTranscriptionProvider` — wraps iOS Speech framework / Android `SpeechRecognizer`, **not the LLM**. See rationale below.
 - `PlatformOCRProvider` — wraps ML Kit / Vision on-device text recognition, **not the LLM**. Same rationale.
-- `ManualFallbackProvider` — a null-object implementation for devices that can't run Gemma 3n at all (Section 7): `extract()` returns "needs manual entry" instead of throwing, `embed()` returns null and search silently degrades to keyword-only. The app must never crash or block capture because the model isn't available — it should just quietly become the pre-AI version of itself.
+- `ManualFallbackProvider` — a null-object implementation for devices that can't run a local model (Section 7): `extract()` returns "needs manual entry" instead of throwing, `embed()` returns null and search silently degrades to keyword-only. The app must never crash or block capture because the model isn't available — it should just quietly become the pre-AI version of itself.
 
 ### Why ASR and OCR are platform-native, not the LLM, even though Gemma 3n is multimodal
 Gemma 3n *can* take audio and image input directly, but routing every voice note or screenshot through the full multimodal model is the heavier, slower, more battery-costly path for a job that mature, purpose-built on-device APIs already do accurately, near-instantly, and with zero extra download. Reserve the LLM for what only it can do — structured reasoning over text — and let the OS do transcription and text recognition. This also shrinks the required model footprint, which matters directly for Section 7's device-compatibility story.
@@ -342,7 +346,7 @@ This staged plan is exactly why the provider abstraction in Section 6 exists: sw
 | `isar_community` | Local database — source of truth |
 | `flutter_riverpod` + `riverpod_generator` | State management, dependency injection, reactive streams |
 | `go_router` | Navigation |
-| `flutter_gemma` | On-device Gemma 3n inference (extraction, embeddings), via the provider abstraction only |
+| `flutter_gemma` + `flutter_gemma_litertlm` | On-device LiteRT-LM inference bridge (extraction, embeddings), via the provider abstraction only |
 | `supabase_flutter` | Auth + optional backup/sync client |
 | `workmanager` | Background sync engine + daily Suggestion Engine job |
 | `flutter_secure_storage` | Auth tokens, encryption keys |

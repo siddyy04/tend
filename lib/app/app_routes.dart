@@ -6,6 +6,10 @@ abstract final class AppRoutes {
   static const today = '/today';
   static const search = '/search';
   static const personNew = '/person/new';
+  static const capture = '/capture';
+  static const captureConfirm = '/capture/confirm';
+  static const modelSetup = '/capture/setup';
+  static const gemmaProbe = '/debug/gemma-probe';
 
   static String personEdit(String personUuid) => '/person/edit/$personUuid';
 

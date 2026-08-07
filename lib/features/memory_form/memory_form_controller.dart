@@ -10,7 +10,12 @@ import 'package:uuid/uuid.dart';
 /// Family key for [memoryFormControllerProvider].
 ///
 /// [personUuid] is always required. [memoryUuid] is null in create mode.
-typedef MemoryFormArgs = ({String personUuid, String? memoryUuid});
+/// [initialEventText] optionally pre-fills create mode (capture fallback).
+typedef MemoryFormArgs = ({
+  String personUuid,
+  String? memoryUuid,
+  String? initialEventText,
+});
 
 /// Create/edit memory form — autoDispose family keyed by [MemoryFormArgs].
 ///
@@ -60,7 +65,7 @@ class MemoryFormController extends AsyncNotifier<void> {
 
     if (memoryUuid == null) {
       category = null;
-      eventText = '';
+      eventText = args.initialEventText?.trim() ?? '';
       dateEnabled = false;
       dateValue = null;
       importanceScore = defaultImportanceScore;

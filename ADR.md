@@ -258,3 +258,65 @@ AI augments existing workflows rather than defining them.
 - Easier debugging
 - Better testing
 - Clear separation between CRUD and intelligence
+
+---
+
+### ADR-010 — Model-agnostic LiteRT provider (abandon Gemma 3n Preview for MVP)
+
+**Status**
+Superseded in part by ADR-011 (MVP model choice and engine). Provider rename + catalog ownership remain in force.
+
+**Date**
+2026-08-07
+
+**Context**
+Sprint 2A scaffolded on-device extraction behind provider interfaces, but the concrete layer was named for Gemma and the catalog still pointed at Gemma 3n Preview. That Preview artifact is gated on Hugging Face and is unsuitable for Tend’s MVP in-app download (no end-user hub login). Tend must support publicly available LiteRT models without rewriting Capture, Confirmation, or repositories.
+
+**Decision**
+- Rename the concrete AI implementation folder/types from Gemma-specific names to **LiteRT** (`lib/ai/providers/litert/`, `LiteRtExtractionProvider`, `LiteRtInferenceAdapter`, `LiteRtPromptBuilder`).
+- Keep using the `flutter_gemma` package as the LiteRT bridge; only the Tend adapter may import it.
+- **`ModelCatalog` owns model selection**, including `displayName`, `fileName`, download URL, checksum, and install identity (`modelKind` / `fileKind`). Capture and Confirmation never read the catalog.
+- ~~MVP default model: **Qwen 2.5 0.5B Instruct**. Qwen 2.5 1.5B remains in the catalog as an optional future upgrade.~~ → see ADR-011.
+- Download UX: automatic download is the default path, with staged progress (Downloading → Verifying → Installing → Preparing model). Manual file placement is a fallback only (download failure, no URL, or explicit user choice), with exact file name and destination path instructions.
+
+**Rationale**
+- Separates runtime (LiteRT) from which weights are installed (catalog).
+- Lets model swaps be a catalog change, not a pipeline rewrite.
+- Matches MVP constraints: public HTTPS artifact, no hub login.
+
+**Consequences**
+- `ARCHITECTURE.md` Gemma-3n-as-default wording is superseded for the concrete provider/folder names and MVP model choice; the provider-interface pattern remains.
+- Sprint 2B and later work target `litert/` paths, not `gemma/`.
+- Device RAM floors may be revisited later; not required for this rename.
+
+---
+
+### ADR-011 — Gemma 4 LiteRT-LM as sole MVP inference stack
+
+**Status**
+Accepted
+
+**Date**
+2026-08-07
+
+**Context**
+Qwen 2.5 0.5B via MediaPipe `.task` proved the LiteRT architecture and native function-calling path, but literal-grounding quality on the 11-prompt benchmark was too low for MVP (2 accepted / 9 rejected). Maintaining MediaPipe `.task` (Qwen) and LiteRT-LM (Gemma 4) as dual engines is unnecessary complexity. Google’s Gemma 4 E2B/E4B ship as public `.litertlm` artifacts with native tool calling.
+
+**Decision**
+- **Sole production inference engine:** LiteRT-LM via `flutter_gemma_litertlm` (`LiteRtLmEngine`). Retire MediaPipe / `.task` / Qwen from production code.
+- **MVP required model:** Gemma 4 E2B IT (`gemma4-e2b-it-v1`) — Recommended / default via `ModelCatalog.current`.
+- **Optional upgrade:** Gemma 4 E4B IT (`gemma4-e4b-it-v1`) — Best Quality for capable devices; catalog-listed, not required.
+- Keep `ExtractionProvider`, Capture, Confirmation, repositories, and validation unchanged.
+- Keep model-agnostic `ModelCatalog` so future Gemma releases are catalog additions.
+- Backend preference: **GPU → NPU (NNAPI-class) → CPU**, with automatic fallback.
+- Native function calling (`ModelType.gemma4`, `supportsFunctionCalls: true`, `ToolChoice.auto`).
+
+**Rationale**
+- One inference stack reduces maintenance and abort risk from divergent engines.
+- Public HF litert-community URLs (`needsAuth: false`); offline after install.
+- E2B targets quality + footprint for MVP; E4B remains opt-in for high-end devices.
+
+**Consequences**
+- `flutter_gemma_mediapipe` removed from `pubspec.yaml`.
+- ADR-010’s Qwen default is superseded; LiteRT naming + catalog ownership remain.
+- Benchmark against the prior Qwen 11-prompt suite before locking E2B as the quality baseline.

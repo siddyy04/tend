@@ -52,6 +52,11 @@ class CircleScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('My Circle'),
         actions: [
+          IconButton(
+            onPressed: () => context.openCreatePerson(),
+            tooltip: 'Add person',
+            icon: const Icon(Icons.person_add_outlined),
+          ),
           TextButton(
             onPressed: () {
               ref.read(authControllerProvider.notifier).signOut();
@@ -59,11 +64,6 @@ class CircleScreen extends ConsumerWidget {
             child: const Text('Logout'),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.openCreatePerson(),
-        tooltip: 'Add person',
-        child: const Icon(Icons.person_add_outlined),
       ),
       body: peopleAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

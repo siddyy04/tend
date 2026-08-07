@@ -57,6 +57,28 @@ Accidental deletes currently require a future restore feature.
 
 ## Medium Priority
 
+### AI Quality — complete primary clause for eventText
+**Problem**
+Literal extraction sometimes returns verb fragments for `eventText` (e.g. “works at Google” instead of “John works at Google”), which is weaker for confirmation and saved memory display even when grounding accepts the candidate.
+
+**Proposed solution**
+- When extracting `eventText`, prefer the complete primary clause, including subject, instead of returning verb fragments.
+- Keep using only words from the note; do not invent.
+- Prompt already nudges this; revisit if Gemma 4 E2B still truncates after confirmation UX review.
+
+---
+
+### AI / Date Resolution
+**Problem**
+Relative date phrases are stored as `dateValueRaw` only. Confirmation and later features benefit from an absolute `dateValue` derived from the device clock.
+
+**Proposed solution**
+- When `datePrecision == relative`, resolve `dateValueRaw` into an absolute `dateValue` using the device’s current date and timezone.
+- Examples: tomorrow, yesterday, next week, next Thursday, in 3 months.
+- The LLM should continue copying the literal phrase only. Resolution should be deterministic in app code rather than performed by the model.
+
+---
+
 ### Temporary Logout on My Circle
 **Problem**
 Developer Logout lives on the My Circle AppBar from Sprint 0.
@@ -151,6 +173,25 @@ Future search should support:
 - Suggestions
 
 instead of a single combined list.
+
+---
+
+### Create Person during AI Capture
+**Problem**
+When AI extracts a `personMentioned` that does not match anyone in My Circle, the user must cancel capture, add the person via Sprint 1A flows, and capture again.
+
+**Sprint / area**
+Sprint 2B / Capture UX improvements
+
+**Proposed solution**
+- On the confirmation screen, show an inline **Add '<person>' to My Circle** option when there is no confident match.
+- Let the user edit details (at minimum Relationship and Circle) before creating the person.
+- Create the Person only after explicit user approval.
+- Then save the Memory linked to the newly created Person.
+- Never create people automatically without user confirmation.
+
+**Future enhancement (not part of this item)**
+- If multiple similar people exist (e.g. "John" vs "John Smith"), suggest possible matches before offering to create a new person.
 
 ---
 

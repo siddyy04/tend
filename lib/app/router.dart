@@ -5,12 +5,18 @@ import 'package:go_router/go_router.dart';
 
 import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/capture/capture_entry_point.dart';
+import '../features/capture/capture_screen.dart';
+import '../features/capture/confirmation/capture_confirmation_args.dart';
+import '../features/capture/confirmation/capture_confirmation_screen.dart';
+import '../features/capture/model_setup_screen.dart';
 import '../features/circle/circle_screen.dart';
 import '../features/memory_form/memory_form_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
 import '../features/person_form/person_form_screen.dart';
 import '../features/person_profile/person_profile_screen.dart';
 import '../features/search/search_screen.dart';
+import '../debug/gemma_probe_screen.dart';
 import 'app_routes.dart';
 
 export 'app_routes.dart';
@@ -123,7 +129,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile/:personUuid/memory/new',
         builder: (context, state) {
           final personUuid = state.pathParameters['personUuid']!;
-          return MemoryFormScreen(personUuid: personUuid);
+          final initialEventText =
+              state.extra is String ? state.extra as String : null;
+          return MemoryFormScreen(
+            personUuid: personUuid,
+            initialEventText: initialEventText,
+          );
         },
       ),
       GoRoute(
@@ -136,6 +147,35 @@ final routerProvider = Provider<GoRouter>((ref) {
             personUuid: personUuid,
             memoryUuid: memoryUuid,
           );
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.modelSetup,
+        builder: (context, state) => const ModelSetupScreen(),
+      ),
+      if (kDebugMode)
+        GoRoute(
+          parentNavigatorKey: _rootNavigatorKey,
+          path: AppRoutes.gemmaProbe,
+          builder: (context, state) => const GemmaProbeScreen(),
+        ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.capture,
+        builder: (context, state) => const CaptureScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.captureConfirm,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! CaptureConfirmationArgs) {
+            return const Scaffold(
+              body: Center(child: Text('Missing capture details')),
+            );
+          }
+          return CaptureConfirmationScreen(args: args);
         },
       ),
     ],
@@ -152,6 +192,7 @@ class _AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
+      floatingActionButton: const CaptureEntryPoint(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {

@@ -6,6 +6,92 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.3 — Sprint 2A closeout
+
+## Changed
+
+### On-device assistance
+- Release builds no longer retain verbose AI prompt/raw diagnostic payloads (debug-only)
+- Temporary troubleshooting paths removed from the LiteRT inference adapter (CPU retry / text-envelope recovery)
+
+### Capture quality (retained from late 2A)
+- Invalid model categories are rejected (no silent fallback to Preferences)
+- Unique Circle name matches pre-select the person on confirmation
+- Date phrases like “15 August” classify as explicit; relative phrases stay relative
+
+## Notes
+
+- Sprint 2A is closed; next is Sprint 2B (`SPRINT2B.md`)
+- Warm capture remains offline and typically ~6s; cold first inference after prepare can be ~11s on some devices
+
+---
+
+# v0.3.2 — Gemma 4 LiteRT-LM (MVP model)
+
+## Changed
+
+### On-device assistance
+- Default / required MVP model is now **Gemma 4 E2B IT** (LiteRT-LM `.litertlm`)
+- **Gemma 4 E4B IT** is listed as an optional Best Quality upgrade for capable devices
+- Inference engine is **LiteRT-LM only**; MediaPipe `.task` / Qwen paths removed from production
+- Accelerator preference: GPU → NPU → CPU with automatic fallback
+
+## Notes
+
+- Capture, confirmation, repositories, and validation are unchanged
+- Model selection remains catalog-driven (`ModelCatalog`) for future Gemma releases
+- Same 11-prompt literal-grounding suite vs Qwen 0.5B baseline: **11/11 accepted** (was 2/11) on GPU; cold start ~11s, warm ~6s/capture, peak RSS ~1.1 GB, download ~2.41 GB
+
+---
+
+# v0.3.1 — Model-agnostic LiteRT (pre–Sprint 2B)
+
+## Changed
+
+### On-device assistance
+- Concrete AI layer renamed from Gemma-specific types to a **LiteRT** provider stack
+- Default model was **Qwen 2.5 0.5B Instruct** (superseded by v0.3.2 / Gemma 4 E2B)
+- Model setup shows staged progress: Downloading → Verifying → Installing → Preparing model
+- Manual model placement is a fallback only, with exact file name and destination path
+
+## Notes
+
+- Capture, confirmation, and repository contracts are unchanged
+- Voice/photo/share and multi-candidate review remain Sprint 2B
+
+---
+
+# v0.3.0 — Text Capture & On-Device Extraction (Sprint 2A)
+
+## Added
+
+### Capture
+- Global capture entry from the app shell
+- Text capture with review-before-saving confirmation
+- Collapsible read-only Original Note on confirmation
+- First-run model setup gate (prepare on-device assistance or continue manually)
+
+### On-device assistance
+- Device capability check (RAM tiers)
+- Optional model download/verify (no Hugging Face login)
+- Manual model placement for development
+- Graceful manual capture when the device or model is unavailable
+
+### Architecture
+- AI provider interfaces (extraction implemented; embedding/transcription/OCR stubs)
+- Model catalog designed for future version upgrades without changing capture UI
+
+## Changed
+
+- Circle “Add person” moved to the AppBar so the shell capture FAB stays primary
+
+## Notes
+
+- Voice, photo, share-sheet, multi-candidate review, and embeddings are not in this release
+- Choosing manual entry does not permanently complete model setup (Settings can offer download later)
+
+---
+
 # v0.2.0 — Person & Memory Foundation
 
 ## Added

@@ -1,4 +1,4 @@
-﻿name: my_first_app
+name: my_first_app
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -48,6 +48,13 @@ dependencies:
   # freezed 3.2.4 / json_serializable 6.12.0 share analyzer ^9 with the stack above.
   freezed_annotation: 3.1.0
   json_annotation: '>=4.10.0 <4.11.0'
+  flutter_gemma: ^1.5.2
+  path: ^1.9.1
+  device_info_plus: ^13.2.0
+  http: ^1.6.0
+  crypto: ^3.0.7
+  shared_preferences: ^2.5.5
+  flutter_gemma_litertlm: ^1.3.1
 
 dev_dependencies:
   flutter_test:
