@@ -7,16 +7,13 @@ import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/circle/circle_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
+import '../features/person_form/person_form_screen.dart';
 import '../features/search/search_screen.dart';
+import 'app_routes.dart';
 
-/// Route path constants for Sprint 0.
-abstract final class AppRoutes {
-  static const splash = '/splash';
-  static const auth = '/auth';
-  static const circle = '/circle';
-  static const today = '/today';
-  static const search = '/search';
-}
+export 'app_routes.dart';
+
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 /// Notifies [GoRouter] when [authControllerProvider] changes.
 class _AuthRouterRefresh extends ChangeNotifier {
@@ -30,6 +27,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     refreshListenable: refresh,
     debugLogDiagnostics: kDebugMode,
@@ -95,6 +93,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      // Full-screen form routes (no bottom nav) — keyed by uuid, never Isar id.
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.personNew,
+        builder: (context, state) => const PersonFormScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/person/edit/:personUuid',
+        builder: (context, state) {
+          final personUuid = state.pathParameters['personUuid']!;
+          return PersonFormScreen(personUuid: personUuid);
+        },
       ),
     ],
   );

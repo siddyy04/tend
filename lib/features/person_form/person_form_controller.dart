@@ -9,17 +9,20 @@ import 'package:uuid/uuid.dart';
 /// Create/edit person form — family key is optional [personUuid]
 /// (`null` = create mode).
 ///
+/// Auto-dispose so each Add/Edit navigation gets a fresh controller.
+/// Create vs edit is determined solely by [personUuid], never by mutable
+/// controller state.
+///
 /// `AsyncValue<void>` covers load + save lifecycle; draft fields live on the
 /// notifier and are updated via setters so the UI stays logic-free.
-final personFormControllerProvider = AsyncNotifierProvider.family<
-    PersonFormController,
-    void,
-    String?>(PersonFormController.new);
+final personFormControllerProvider = AsyncNotifierProvider.autoDispose
+    .family<PersonFormController, void, String?>(PersonFormController.new);
 
 class PersonFormController extends AsyncNotifier<void> {
   PersonFormController(this.personUuid);
 
   /// `null` → create; non-null → edit that person.
+  /// This is the sole source of truth for create vs edit.
   final String? personUuid;
 
   String name = '';
@@ -30,7 +33,8 @@ class PersonFormController extends AsyncNotifier<void> {
   String? circleTierError;
   String? relationshipTypeError;
 
-  Person? _existing;
+  /// Set when persist fails; cleared on the next [save] attempt.
+  Object? saveError;
 
   bool get isEditMode => personUuid != null;
 
@@ -46,12 +50,12 @@ class PersonFormController extends AsyncNotifier<void> {
     nameError = null;
     circleTierError = null;
     relationshipTypeError = null;
+    saveError = null;
 
     if (personUuid == null) {
       name = '';
       circleTier = defaultCircleTier;
       relationshipType = '';
-      _existing = null;
       return;
     }
 
@@ -61,7 +65,6 @@ class PersonFormController extends AsyncNotifier<void> {
       throw StateError('Person not found: $personUuid');
     }
 
-    _existing = person;
     name = person.name;
     circleTier = person.circleTier;
     relationshipType = person.relationshipType ?? '';
@@ -88,9 +91,12 @@ class PersonFormController extends AsyncNotifier<void> {
   /// Validates and persists. Returns `true` on success.
   ///
   /// On validation failure, sets field errors, does not write to Isar, and
-  /// returns `false`. On success, state is [AsyncData]; on persist failure,
-  /// state is [AsyncError].
+  /// returns `false`. Persist failures set [saveError] and keep [AsyncData]
+  /// so the form stays visible (load errors still use [AsyncError]).
+  ///
+  /// Create vs update is decided only by [personUuid].
   Future<bool> save() async {
+    saveError = null;
     nameError = validatePersonName(name);
     circleTierError = validateCircleTier(circleTier);
     relationshipTypeError = validateRelationshipType(relationshipType);
@@ -108,11 +114,10 @@ class PersonFormController extends AsyncNotifier<void> {
         trimmedRelationship.isEmpty ? null : trimmedRelationship;
     final now = DateTime.now();
 
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    try {
       final repo = ref.read(personRepositoryProvider);
 
-      if (_existing == null) {
+      if (personUuid == null) {
         final person = Person()
           ..uuid = const Uuid().v4()
           ..name = trimmedName
@@ -123,9 +128,12 @@ class PersonFormController extends AsyncNotifier<void> {
           ..syncStatus = SyncStatus.pending
           ..deletedAt = null;
         await repo.create(person);
-        _existing = person;
       } else {
-        final person = _existing!
+        final person = await repo.getByUuid(personUuid!);
+        if (person == null) {
+          throw StateError('Person not found: $personUuid');
+        }
+        person
           ..name = trimmedName
           ..circleTier = circleTier
           ..relationshipType = relationship
@@ -133,9 +141,14 @@ class PersonFormController extends AsyncNotifier<void> {
           ..syncStatus = SyncStatus.pending;
         await repo.update(person);
       }
-    });
 
-    return !state.hasError;
+      _emitDraft();
+      return true;
+    } catch (e) {
+      saveError = e;
+      _emitDraft();
+      return false;
+    }
   }
 
   void _emitDraft() {
