@@ -66,13 +66,16 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
 
       switch (result) {
         case CaptureSubmitReady(:final candidates):
+          final args = CaptureConfirmationArgs(
+            candidates: candidates,
+            originalText: _textController.text,
+          );
           unawaited(
             context.push(
-              AppRoutes.captureConfirm,
-              extra: CaptureConfirmationArgs(
-                candidates: candidates,
-                originalText: _textController.text,
-              ),
+              args.isSingle
+                  ? AppRoutes.captureConfirm
+                  : AppRoutes.captureConfirmSummary,
+              extra: args,
             ),
           );
         case CaptureSubmitEmpty(:final debugDetail):

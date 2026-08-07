@@ -8,7 +8,7 @@ import 'package:my_first_app/features/capture/confirmation/widgets/candidate_car
 import 'package:my_first_app/features/capture/confirmation/widgets/original_note_section.dart';
 import 'package:my_first_app/features/circle/circle_providers.dart';
 
-/// Single-candidate confirmation screen (Sprint 2A).
+/// Single-candidate confirmation screen (Sprint 2A UX, unchanged for N=1).
 class CaptureConfirmationScreen extends ConsumerStatefulWidget {
   const CaptureConfirmationScreen({
     super.key,
@@ -28,6 +28,11 @@ class _CaptureConfirmationScreenState
   late final TextEditingController _dateRawController;
   var _seeded = false;
   var _saving = false;
+
+  CaptureDraftKey get _draftKey => CaptureDraftKey(
+        index: 0,
+        candidate: widget.args.candidate,
+      );
 
   @override
   void initState() {
@@ -67,9 +72,8 @@ class _CaptureConfirmationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final candidate = widget.args.candidate;
     final asyncForm =
-        ref.watch(captureConfirmationControllerProvider(candidate));
+        ref.watch(captureConfirmationControllerProvider(_draftKey));
     final people =
         ref.watch(allPeopleProvider).asData?.value ?? const [];
 
@@ -82,7 +86,7 @@ class _CaptureConfirmationScreenState
         error: (error, _) => Center(child: Text('$error')),
         data: (_) {
           final form = ref.read(
-            captureConfirmationControllerProvider(candidate).notifier,
+            captureConfirmationControllerProvider(_draftKey).notifier,
           );
           _seedIfNeeded(form);
 

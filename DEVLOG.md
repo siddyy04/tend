@@ -123,4 +123,10 @@
   - Prompt completeness pass: status/recovery guidance + pattern few-shots (avoid literal example quotes that contaminate grounding)
   - Mom re-check after prompt tune: **PASS** 4/4 parallel calls (surgery, physio, recovering well, follow-up scan); ~14.6s GPU
 
+### Phase 2B.2 — Multi-memory confirmation
+
+- Single candidate: existing Sprint 2A confirmation UX unchanged
+- Multiple: summary (“We found X memories”, person + event lines, Continue, no checkboxes) → multi-card edit with per-card Save toggle (default ON), selection count, dynamic “Save N memories” button; Original Note preserved
+- Routes: `/capture/confirm/summary`, `/capture/confirm/multi`
+
 

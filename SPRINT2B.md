@@ -281,7 +281,7 @@ Implement **only** in this order. Do not skip ahead to voice/OCR/share/clarifica
 | Phase | Name | What to build | Complexity | Notes / risks |
 |---|---|---|---|---|
 | **2B.1** | Multi-memory extraction | **Done (parallel FC).** Spike locked approach; adapter/provider/prompt + Capture pass all candidates | **High** | Confirmed on device; multi-card UI deferred to 2B.2 |
-| **2B.2** | Multi-memory confirmation | Multi-card confirmation; independent review / edit / select-deselect / save; optional “We found X memories” checkbox summary first | **Medium** | Depends on 2B.1 returning N candidates reliably |
+| **2B.2** | Multi-memory confirmation | **Done.** Summary → multi-card; Save toggles; N=1 keeps 2A UX | **Medium** | Depends on 2B.1 returning N candidates |
 | **2B.3** | Create Person during capture | Inline Add to My Circle when no match; Relationship + Circle editable; create only after explicit approval; then link Memory | **Medium** | Core Sprint 2B feature (not optional). Never auto-create. Similar-name suggestions stay backlog |
 | **2B.4** | Voice capture | `PlatformTranscriptionProvider`, mic permissions, audio `sourceRef`, wire into extract → confirm | **High** | OS ASR variance; file retention debt; RAM with model loaded |
 | **2B.5** | OCR / Photo capture | `PlatformOCRProvider`, camera/gallery, image `sourceRef`, OCR-only | **High** | Empty OCR; permissions; avoid scene captioning scope creep |

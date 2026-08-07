@@ -1,9 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:my_first_app/ai/providers/extraction_provider.dart';
 
-/// Navigation payload for the capture confirmation screen.
+/// Navigation payload for capture confirmation (single or multi).
 ///
 /// [originalText] is UI-only reference — never persisted to [Memory].
-/// Sprint 2B.1 may pass multiple [candidates]; multi-card UI is Phase 2B.2.
 class CaptureConfirmationArgs {
   const CaptureConfirmationArgs({
     required this.candidates,
@@ -15,6 +15,29 @@ class CaptureConfirmationArgs {
   /// Exact text the user typed on the capture screen.
   final String originalText;
 
-  /// Temporary: single-card confirmation uses the first candidate until 2B.2.
+  bool get isSingle => candidates.length == 1;
+
   ExtractedMemoryCandidate get candidate => candidates.first;
+}
+
+/// Stable family key so each multi-card draft has isolated Riverpod state.
+@immutable
+class CaptureDraftKey {
+  const CaptureDraftKey({
+    required this.index,
+    required this.candidate,
+  });
+
+  final int index;
+  final ExtractedMemoryCandidate candidate;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CaptureDraftKey &&
+        other.index == index &&
+        other.candidate == candidate;
+  }
+
+  @override
+  int get hashCode => Object.hash(index, candidate);
 }

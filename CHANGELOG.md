@@ -6,6 +6,21 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.4 — Multi-memory confirmation (Sprint 2B.2)
+
+## Added
+
+### Capture
+- When extraction finds multiple memories: summary (“We found X memories”) then per-memory editable cards
+- Each card has a Save toggle (default on); save button shows how many will be saved
+- Single-memory capture keeps the previous review screen
+
+## Notes
+
+- Extraction protocol unchanged (ADR-012: one FunctionCall → one memory candidate)
+
+---
+
 # v0.3.3 — Sprint 2A closeout
 
 ## Changed

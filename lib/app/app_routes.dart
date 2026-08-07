@@ -8,6 +8,8 @@ abstract final class AppRoutes {
   static const personNew = '/person/new';
   static const capture = '/capture';
   static const captureConfirm = '/capture/confirm';
+  static const captureConfirmSummary = '/capture/confirm/summary';
+  static const captureConfirmMulti = '/capture/confirm/multi';
   static const modelSetup = '/capture/setup';
   static const gemmaProbe = '/debug/gemma-probe';
 

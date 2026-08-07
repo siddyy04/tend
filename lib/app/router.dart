@@ -9,6 +9,8 @@ import '../features/capture/capture_entry_point.dart';
 import '../features/capture/capture_screen.dart';
 import '../features/capture/confirmation/capture_confirmation_args.dart';
 import '../features/capture/confirmation/capture_confirmation_screen.dart';
+import '../features/capture/confirmation/capture_multi_confirmation_screen.dart';
+import '../features/capture/confirmation/capture_multi_summary_screen.dart';
 import '../features/capture/model_setup_screen.dart';
 import '../features/circle/circle_screen.dart';
 import '../features/memory_form/memory_form_screen.dart';
@@ -176,6 +178,32 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           }
           return CaptureConfirmationScreen(args: args);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.captureConfirmSummary,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! CaptureConfirmationArgs) {
+            return const Scaffold(
+              body: Center(child: Text('Missing capture details')),
+            );
+          }
+          return CaptureMultiSummaryScreen(args: args);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.captureConfirmMulti,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! CaptureConfirmationArgs) {
+            return const Scaffold(
+              body: Center(child: Text('Missing capture details')),
+            );
+          }
+          return CaptureMultiConfirmationScreen(args: args);
         },
       ),
     ],

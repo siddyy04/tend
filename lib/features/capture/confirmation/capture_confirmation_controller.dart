@@ -5,19 +5,22 @@ import 'package:my_first_app/data/local/isar/collections/memory.dart';
 import 'package:my_first_app/domain/rules/extraction_validation_rules.dart';
 import 'package:my_first_app/domain/rules/memory_sensitivity_rules.dart';
 import 'package:my_first_app/domain/validators/memory_validators.dart';
+import 'package:my_first_app/features/capture/confirmation/capture_confirmation_args.dart';
 import 'package:my_first_app/features/person_profile/person_profile_providers.dart';
 import 'package:uuid/uuid.dart';
 
-/// Editable confirmation draft for a single capture candidate (Sprint 2A).
+/// Editable confirmation draft for one capture candidate.
 final captureConfirmationControllerProvider = AsyncNotifierProvider.autoDispose
-    .family<CaptureConfirmationController, void, ExtractedMemoryCandidate>(
+    .family<CaptureConfirmationController, void, CaptureDraftKey>(
   CaptureConfirmationController.new,
 );
 
 class CaptureConfirmationController extends AsyncNotifier<void> {
-  CaptureConfirmationController(this.initial);
+  CaptureConfirmationController(this.key);
 
-  final ExtractedMemoryCandidate initial;
+  final CaptureDraftKey key;
+
+  ExtractedMemoryCandidate get initial => key.candidate;
 
   late MemoryCategory category;
   late String eventText;
