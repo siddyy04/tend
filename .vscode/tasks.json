@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flutter: Pub Get",
+      "type": "shell",
+      "command": "flutter pub get",
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Flutter: Analyze",
+      "type": "shell",
+      "command": "flutter analyze",
+      "problemMatcher": [
+        "$dartanalyzer"
+      ],
+      "group": "test"
+    },
+    {
+      "label": "Flutter: Test",
+      "type": "shell",
+      "command": "flutter test",
+      "problemMatcher": [
+        "$dartanalyzer"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Codegen: Build",
+      "type": "shell",
+      "command": "dart run build_runner build",
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Codegen: Watch",
+      "type": "shell",
+      "command": "dart run build_runner watch",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

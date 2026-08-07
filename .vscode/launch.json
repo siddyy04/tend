@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Tend (debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define=SUPABASE_URL=https://zstimbbqtfkxsixlvtay.supabase.co",
+        "--dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzdGltYmJxdGZreHNpeGx2dGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwMjY3MTcsImV4cCI6MjEwMTYwMjcxN30.-pkhgmtKXlfgBzYltviPVYMVv08Sv7REKU_HS6vngy8"
+      ]
+    },
+    {
+      "name": "Tend (profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "profile",
+      "toolArgs": [
+        "--dart-define=SUPABASE_URL=${env:SUPABASE_URL}",
+        "--dart-define=SUPABASE_ANON_KEY=${env:SUPABASE_ANON_KEY}"
+      ]
+    },
+    {
+      "name": "Tend (Android)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "debug",
+      "deviceId": "android",
+      "toolArgs": [
+        "--dart-define=SUPABASE_URL=${env:SUPABASE_URL}",
+        "--dart-define=SUPABASE_ANON_KEY=${env:SUPABASE_ANON_KEY}"
+      ]
+    }
+  ]
+}
