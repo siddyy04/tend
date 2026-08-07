@@ -1,2 +1,16 @@
-// Sprint 0 Section 2 scaffolding only.
-// Will hold the Search placeholder screen.
+import 'package:flutter/material.dart';
+
+/// Search placeholder — no search logic this sprint.
+class SearchScreen extends StatelessWidget {
+  const SearchScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Search')),
+      body: const Center(
+        child: Text('Coming soon'),
+      ),
+    );
+  }
+}

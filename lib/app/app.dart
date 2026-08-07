@@ -1,35 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'router.dart';
 
 /// Root application widget.
 ///
-/// Hosts [MaterialApp] only. Routing, auth redirects, and shell navigation
-/// are wired in later Sprint 0 steps via `router.dart`.
-class App extends StatelessWidget {
+/// Uses [MaterialApp.router] when bootstrap succeeded; otherwise shows a
+/// clear startup error (Isar / Supabase init failure).
+class App extends ConsumerWidget {
   const App({super.key, this.initializationError});
 
   /// Non-null when Supabase or Isar bootstrap failed in [main].
   final Object? initializationError;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (initializationError != null) {
+      return MaterialApp(
+        title: 'Tend',
+        home: _BootstrapError(error: initializationError!),
+      );
+    }
+
+    final router = ref.watch(routerProvider);
+    return MaterialApp.router(
       title: 'Tend',
-      home: initializationError == null
-          ? const _BootstrapOk()
-          : _BootstrapError(error: initializationError!),
-    );
-  }
-}
-
-class _BootstrapOk extends StatelessWidget {
-  const _BootstrapOk();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Tend'),
-      ),
+      routerConfig: router,
     );
   }
 }
