@@ -1,7 +1,7 @@
 # Tend — Development Roadmap (Cursor / Flutter build order)
 
 **Supersedes:** `03-development-roadmap.md`. Aligned to `ARCHITECTURE.md` (ADR-0001).
-**How to use this with Cursor:** work through this sprint by sprint — copy only that sprint's section into a Cursor prompt (e.g. *"Implement Sprint 1 exactly as scoped below, using SCHEMA.md and FEATURES.md as the source of truth"*). Each sprint is independently shippable and testable before moving to the next.
+**How to use this with Cursor:** work through this sprint by sprint — copy only that sprint's section into a Cursor prompt (e.g. *"Implement Sprint 1A exactly as scoped below, using SCHEMA.md and FEATURES.md as the source of truth"* — or Sprint 1B / Sprint 2 as appropriate). Each sprint is independently shippable and testable before moving to the next.
 
 **Stack (per ADR-0001):** Flutter, `isar_community` (local source of truth), `flutter_riverpod` + `riverpod_generator`, `go_router`, `flutter_gemma` (behind the `ai/providers/` abstraction), `supabase_flutter` (auth + optional backup), `workmanager` (background sync + Suggestion Engine). Repo organized feature-first per `ARCHITECTURE.md` Section 2.
 
@@ -9,7 +9,7 @@
 
 ---
 
-## Sprint 0 — Project Setup
+## Sprint 0 — Project Setup ✅ Done
 **Goal:** an empty but real app — auth works, local schema is live, navigation shell exists.
 - Flutter project scaffold; add `isar_community`, `flutter_riverpod`, `riverpod_generator`, `go_router`, `supabase_flutter`.
 - Define the Isar collections and enums exactly as specified in `SCHEMA.md`; run codegen; open the local Isar instance behind a Riverpod provider.
@@ -18,7 +18,7 @@
 - App shell: bottom nav or drawer with My Circle / Today / Search stubs, using `go_router`.
 - **Done when:** a user can sign up, log in, and see an empty "My Circle" screen backed by a real (empty) local Isar collection — no network dependency beyond the auth call itself.
 
-## Sprint 1A — Person CRUD (no memories, no AI)
+## Sprint 1A — Person CRUD (no memories, no AI) ✅ Done
 **Goal:** ship a complete people layer against Isar before adding memory complexity.
 - `PersonRepository` + Riverpod providers/streams (Isar watchers); nothing above the repository touches Isar directly (`ARCHITECTURE.md`).
 - My Circle list grouped by `circleTier`, including a correct empty state when no people exist.
@@ -28,14 +28,14 @@
 - **Out of scope for 1A:** Person Profile, any Memory UI/repository, AI, sync.
 - **Done when:** a user can add, edit, delete, and list people entirely offline with data persisting in Isar, and My Circle shows a proper empty state when appropriate.
 
-## Sprint 1B — Manual Memory CRUD + Person Profile (no AI)
+## Sprint 1B — Manual Memory CRUD + Person Profile (no AI) ✅ Done
 **Goal:** validate the Memory data model end to end with hand-entered data before wiring capture/AI.
 - `MemoryRepository` + Riverpod providers; FK by `personUuid` only (no `IsarLink`).
 - Person Profile screen: timeline of that person's memories (newest first), empty state when none.
 - Manual Add/Edit/Delete Memory: category, event text, optional date fields per `SCHEMA.md`; no AI extraction; `extractionConfidence` left null for manual entry.
-- Person delete cascade: tombstoning a person also tombstones their memories (and related follow-ups if any) — required by `FEATURES.md` acceptance criteria; implement here once memories exist.
 - Routing: navigate from My Circle → Person Profile; memory forms reachable from the profile.
-- **Out of scope for 1B:** AI providers, capture modal, embeddings, Today's Opportunities logic.
+- **Person delete cascade:** originally listed here for `FEATURES.md` acceptance, but **explicitly deferred** after Sprint 1B planning — not implemented in 1B. Tracked in `BACKLOG.md`; schedule with data-controls work (e.g. Sprint 6) unless re-prioritized earlier.
+- **Out of scope for 1B:** AI providers, capture modal, embeddings, Today's Opportunities logic, person→memory cascade.
 - **Done when:** a user can open a person, manually log/edit/delete memories on a timeline, entirely offline, with persistence correct in Isar. Zero AI — deliberately catching data-model problems while they're cheap to fix.
 
 ## Sprint 2 — On-Device Capture + AI Extraction
