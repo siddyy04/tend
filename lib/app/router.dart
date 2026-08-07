@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/circle/circle_screen.dart';
+import '../features/memory_form/memory_form_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
 import '../features/person_form/person_form_screen.dart';
+import '../features/person_profile/person_profile_screen.dart';
 import '../features/search/search_screen.dart';
 import 'app_routes.dart';
 
@@ -106,6 +108,34 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final personUuid = state.pathParameters['personUuid']!;
           return PersonFormScreen(personUuid: personUuid);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/profile/:personUuid',
+        builder: (context, state) {
+          final personUuid = state.pathParameters['personUuid']!;
+          return PersonProfileScreen(personUuid: personUuid);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/profile/:personUuid/memory/new',
+        builder: (context, state) {
+          final personUuid = state.pathParameters['personUuid']!;
+          return MemoryFormScreen(personUuid: personUuid);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/profile/:personUuid/memory/edit/:memoryUuid',
+        builder: (context, state) {
+          final personUuid = state.pathParameters['personUuid']!;
+          final memoryUuid = state.pathParameters['memoryUuid']!;
+          return MemoryFormScreen(
+            personUuid: personUuid,
+            memoryUuid: memoryUuid,
+          );
         },
       ),
     ],

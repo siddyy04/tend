@@ -7,6 +7,7 @@ import 'package:my_first_app/features/circle/circle_providers.dart';
 import 'package:my_first_app/features/circle/widgets/circle_empty_state.dart';
 import 'package:my_first_app/features/circle/widgets/person_tier_section.dart';
 import 'package:my_first_app/features/person_form/person_form_screen.dart';
+import 'package:my_first_app/features/person_profile/person_profile_screen.dart';
 
 /// My Circle — people grouped by [CircleTier], offline Isar-backed.
 class CircleScreen extends ConsumerWidget {
@@ -89,7 +90,8 @@ class CircleScreen extends ConsumerWidget {
                 PersonTierSection(
                   tier: tier,
                   people: grouped[tier]!,
-                  onPersonTap: (person) => context.openEditPerson(person.uuid),
+                  onPersonTap: (person) =>
+                      context.openPersonProfile(person.uuid),
                   onPersonDelete: (person) =>
                       _confirmAndDelete(context, ref, person),
                 ),
