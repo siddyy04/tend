@@ -5,7 +5,7 @@
 
 **Stack (per ADR-0001):** Flutter, `isar_community` (local source of truth), `flutter_riverpod` + `riverpod_generator`, `go_router`, `flutter_gemma` (behind the `ai/providers/` abstraction), `supabase_flutter` (auth + optional backup), `workmanager` (background sync + Suggestion Engine). Repo organized feature-first per `ARCHITECTURE.md` Section 2.
 
-**What changed from the original roadmap:** the core sprint order is preserved almost exactly, per your instruction — but **sync is now its own dedicated sprint (Sprint 5)** rather than a "harden the offline queue" line item folded into polish. Local-first sync with conflict resolution is genuinely new engineering scope the original cloud-primary design never had, and it deserves its own scoped, testable unit rather than being squeezed in at the end. Everything else — sprint count, dependency logic, what ships when — is unchanged in spirit.
+**What changed from the original roadmap:** the core sprint order is preserved almost exactly, per your instruction — but **sync is now its own dedicated sprint (Sprint 5)** rather than a "harden the offline queue" line item folded into polish. Local-first sync with conflict resolution is genuinely new engineering scope the original cloud-primary design never had, and it deserves its own scoped, testable unit rather than being squeezed in at the end. **Sprint 1 is also split into Sprint 1A (Person CRUD) and Sprint 1B (manual Memory CRUD + Person Profile)** so each is independently shippable while preserving the original "validate schema before AI" intent. Everything else — dependency logic, what ships when — is unchanged in spirit.
 
 ---
 
@@ -18,13 +18,25 @@
 - App shell: bottom nav or drawer with My Circle / Today / Search stubs, using `go_router`.
 - **Done when:** a user can sign up, log in, and see an empty "My Circle" screen backed by a real (empty) local Isar collection — no network dependency beyond the auth call itself.
 
-## Sprint 1 — Core People & Memory CRUD (no AI yet)
-**Goal:** validate the local schema and navigation before adding any AI complexity.
-- Add/Edit/Delete Person screen (name, circle tier, relationship type), writing directly to Isar with a generated `uuid`.
-- My Circle list, grouped by `circleTier`, driven by an Isar watcher exposed through Riverpod.
-- Person Profile screen showing memories in a simple timeline (newest first).
-- Manual memory entry form: category dropdown, event text, optional date — no AI extraction yet, direct form-to-Isar write.
-- **Done when:** a user can fully track people and log memories by hand, entirely offline, with data persisting correctly in Isar. Zero AI in this sprint, deliberately — it's here to catch data-model problems while they're still cheap to fix.
+## Sprint 1A — Person CRUD (no memories, no AI)
+**Goal:** ship a complete people layer against Isar before adding memory complexity.
+- `PersonRepository` + Riverpod providers/streams (Isar watchers); nothing above the repository touches Isar directly (`ARCHITECTURE.md`).
+- My Circle list grouped by `circleTier`, including a correct empty state when no people exist.
+- Add Person / Edit Person screens: name, circle tier, relationship type; client-generated `uuid`; `syncStatus = pending`; `createdAt` / `updatedAt` set correctly.
+- Delete Person via `deletedAt` tombstone (not a hard delete); exclude tombstoned people from My Circle.
+- Form validation (required name, valid circle tier, etc.).
+- **Out of scope for 1A:** Person Profile, any Memory UI/repository, AI, sync.
+- **Done when:** a user can add, edit, delete, and list people entirely offline with data persisting in Isar, and My Circle shows a proper empty state when appropriate.
+
+## Sprint 1B — Manual Memory CRUD + Person Profile (no AI)
+**Goal:** validate the Memory data model end to end with hand-entered data before wiring capture/AI.
+- `MemoryRepository` + Riverpod providers; FK by `personUuid` only (no `IsarLink`).
+- Person Profile screen: timeline of that person's memories (newest first), empty state when none.
+- Manual Add/Edit/Delete Memory: category, event text, optional date fields per `SCHEMA.md`; no AI extraction; `extractionConfidence` left null for manual entry.
+- Person delete cascade: tombstoning a person also tombstones their memories (and related follow-ups if any) — required by `FEATURES.md` acceptance criteria; implement here once memories exist.
+- Routing: navigate from My Circle → Person Profile; memory forms reachable from the profile.
+- **Out of scope for 1B:** AI providers, capture modal, embeddings, Today's Opportunities logic.
+- **Done when:** a user can open a person, manually log/edit/delete memories on a timeline, entirely offline, with persistence correct in Isar. Zero AI — deliberately catching data-model problems while they're cheap to fix.
 
 ## Sprint 2 — On-Device Capture + AI Extraction
 **Goal:** the actual core loop — capture in under 10 seconds, entirely on-device, user confirms.
@@ -75,7 +87,8 @@ Pull from the P1 list in `FEATURES.md`: Connection layer, calendar integration, 
 ---
 
 ## Dependency notes (why this order, specifically)
-- **Sprint 1 before Sprint 2:** find data-model problems with a boring manual form before wiring up on-device inference on top of it.
+- **Sprint 1A before Sprint 1B:** prove Person persistence, list grouping, and tombstone delete before introducing Memory FKs and the profile timeline.
+- **Sprint 1B before Sprint 2:** find Memory data-model problems with a boring manual form before wiring up on-device inference on top of it.
 - **Sprint 2 before Sprint 3:** the Suggestion Engine has nothing to rank without real captured memories.
 - **Sprint 2's model management before its extraction UI:** graceful degradation needs to be a foundation every later screen can assume, not a retrofit.
 - **Sprint 3 before Sprint 4:** Today's Opportunities is the retention loop and the core promise; search is valuable but not what makes or breaks the "wow, you remembered" moment.

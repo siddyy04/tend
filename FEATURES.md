@@ -67,8 +67,8 @@ Social feed · Messaging · Calling · AI companion/therapy · Journaling · Rel
 | Data export/delete | Deleting a person cascades to all their memories, follow-ups, and suggestion history locally; if synced, the tombstone propagates correctly — no orphaned rows on either side |
 
 ## Suggested build order within P0
-1. Auth + My Circle + Person CRUD against Isar (no AI yet — validates local schema and navigation)
-2. Manual memory entry (form-based, no AI — validates the Memory data model end to end)
+1. Auth + My Circle + Person CRUD against Isar (Sprint 1A — validates Person schema and navigation)
+2. Manual memory entry + Person Profile timeline (Sprint 1B — validates the Memory data model end to end)
 3. On-device capture: platform ASR/OCR + Gemma 3n extraction (via provider abstraction) + confirmation card + model download/device-tiering flow
 4. Today's Opportunities (local rule-based engine)
 5. Local semantic search
