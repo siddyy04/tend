@@ -249,3 +249,35 @@ DatePrecision classifyDatePrecision(String? dateValueRaw) {
   }
   return (uuid: matchUuid, confidence: 1.0);
 }
+
+/// Deterministic exact name match: trimmed, case-insensitive equality.
+///
+/// Used by capture Create Person (Sprint 2B.3) — no fuzzy matching.
+bool hasExactPersonNameMatch({
+  required String personMentioned,
+  required Iterable<String> knownNames,
+}) {
+  return countExactPersonNameMatches(
+        personMentioned: personMentioned,
+        knownNames: knownNames,
+      ) >
+      0;
+}
+
+/// How many known names equal [personMentioned] after trim + case-fold.
+int countExactPersonNameMatches({
+  required String personMentioned,
+  required Iterable<String> knownNames,
+}) {
+  final needle = personMentioned.trim().toLowerCase();
+  if (needle.isEmpty) {
+    return 0;
+  }
+  var count = 0;
+  for (final name in knownNames) {
+    if (name.trim().toLowerCase() == needle) {
+      count++;
+    }
+  }
+  return count;
+}

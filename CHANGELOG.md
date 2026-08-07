@@ -6,6 +6,21 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.5 — Create Person during capture (Sprint 2B.3)
+
+## Added
+
+### Capture confirmation
+- When the mentioned person is not already in My Circle, an explicit **Create person** action is available
+- User confirms Name, Relationship, and Circle before creation — never auto-created
+- Newly created person is selected on the same confirmation screen
+
+## Notes
+
+- Matching remains exact only (case-insensitive, trimmed); similar-name suggestions are still backlog
+
+---
+
 # v0.3.4 — Multi-memory confirmation (Sprint 2B.2)
 
 ## Added

@@ -57,6 +57,29 @@ Accidental deletes currently require a future restore feature.
 
 ## Medium Priority
 
+### AI Quality — Improve extraction completeness for pronouns and compound sentences
+**Problem**
+Multi-memory extraction under-extracts when later sentences use pronouns, or when multiple facts share one sentence. Manual test:
+
+> Mom had spinal surgery. She started physiotherapy and is recovering well.
+
+Expected three memories (surgery, physiotherapy, recovering well). Actual: only the first memory when later clauses use “She” / “and”. Earlier same-person benchmarks passed when each sentence repeated the name (“Mom … Mom …”), so this is prompt/completeness quality, not protocol design (ADR-012).
+
+**Sprint / area**
+AI Quality (post–Sprint 2B prompt refinement; does **not** block Sprint 2B.3+)
+
+**Proposed solution (prompt only)**
+- Treat every independently useful fact as a separate memory.
+- Do not skip memories merely because later sentences use pronouns (he, she, they, him, her, etc.) instead of repeating the name.
+- Split multiple independent facts in one sentence joined by “and” / “also” / “but” into separate memories where appropriate.
+- Continue avoiding duplicated or merged memories.
+- **Preserve architecture:** one native FunctionCall = one memory; parallel FunctionCall protocol; no `candidates[]` primary protocol (ADR-012).
+
+**Regression suite**
+See `EXTRACTION_COMPLETENESS_BENCHMARK.md` (and `lib/debug/extraction_completeness_cases.dart`). Re-run whenever extraction prompts are refined.
+
+---
+
 ### AI Quality — complete primary clause for eventText
 **Problem**
 Literal extraction sometimes returns verb fragments for `eventText` (e.g. “works at Google” instead of “John works at Google”), which is weaker for confirmation and saved memory display even when grounding accepts the candidate.
@@ -65,6 +88,25 @@ Literal extraction sometimes returns verb fragments for `eventText` (e.g. “wor
 - When extracting `eventText`, prefer the complete primary clause, including subject, instead of returning verb fragments.
 - Keep using only words from the note; do not invent.
 - Prompt already nudges this; revisit if Gemma 4 E2B still truncates after confirmation UX review.
+
+---
+
+### Capture UX — clearer empty-extraction message for insufficient notes
+**Problem**
+When a note lacks enough information (e.g. bare name “Emily”), grounding correctly yields zero memories, but Capture shows a generic “Nothing could be captured from that note” message. That undersells the real reason and does not guide the user.
+
+**Sprint / area**
+Capture UX (future sprint — not blocking Sprint 2B)
+
+**Proposed solution**
+- Prefer copy such as:  
+  “This note doesn't contain enough information to create a memory yet. Try adding what happened or something important about the person.”
+- Keep a path to manual entry.
+- Distinguish soft model/protocol failures from insufficient-information empties only if diagnostics already allow it without new architecture.
+
+**Related**
+- `EXTRACTION_COMPLETENESS_BENCHMARK.md` — Insufficient information (I1–I6)
+- Prompt already instructs zero FunctionCalls when no explicit fact exists
 
 ---
 
@@ -178,20 +220,18 @@ instead of a single combined list.
 
 ### Create Person during AI Capture
 **Status**
-**Promoted into Sprint 2B core** (Phase **2B.3**) — see `SPRINT2B.md`. Kept here only as a pointer until that phase ships.
+**Implemented in Sprint 2B Phase 2B.3** — see confirmation Create Person dialog. Kept here for the remaining future enhancement.
 
 **Problem**
 When AI extracts a `personMentioned` that does not match anyone in My Circle, the user must cancel capture, add the person via Sprint 1A flows, and capture again.
 
 **Sprint / area**
-Sprint 2B / Capture UX (core phase 2B.3)
+Sprint 2B / Capture UX (core phase 2B.3) — **shipped** for exact-match create path.
 
-**Proposed solution**
-- On the confirmation screen, show an inline **Add '<person>' to My Circle** option when there is no confident match.
-- Let the user edit details (at minimum Relationship and Circle) before creating the person.
-- Create the Person only after explicit user approval.
-- Then save the Memory linked to the newly created Person.
-- Never create people automatically without user confirmation.
+**Shipped**
+- Inline Create Person when no exact Circle match (case-insensitive, trimmed).
+- Edit Relationship + Circle before create; explicit confirm only.
+- Select newly created person and stay on confirmation.
 
 **Future enhancement (not part of Sprint 2B)**
 - If multiple similar people exist (e.g. "John" vs "John Smith"), suggest possible matches before offering to create a new person.

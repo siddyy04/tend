@@ -4,10 +4,12 @@ import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/core/constants/memory_category_labels.dart';
 import 'package:my_first_app/data/local/isar/collections/person.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_controller.dart';
+import 'package:my_first_app/features/capture/confirmation/widgets/create_person_from_capture_dialog.dart';
 import 'package:my_first_app/features/capture/confirmation/widgets/person_picker_field.dart';
+import 'package:my_first_app/features/circle/circle_providers.dart';
 
 /// Single-candidate editable card (plain treatment — polish is Sprint 2B).
-class CandidateCard extends ConsumerWidget {
+class CandidateCard extends ConsumerStatefulWidget {
   const CandidateCard({
     super.key,
     required this.controller,
@@ -21,11 +23,49 @@ class CandidateCard extends ConsumerWidget {
   final TextEditingController eventTextController;
   final TextEditingController dateRawController;
 
+  @override
+  ConsumerState<CandidateCard> createState() => _CandidateCardState();
+}
+
+class _CandidateCardState extends ConsumerState<CandidateCard> {
+  /// People created on this card before [allPeopleProvider] catches up.
+  final List<Person> _createdPeople = [];
+
   bool get _dateEnabled =>
-      controller.datePrecision == DatePrecision.explicit;
+      widget.controller.datePrecision == DatePrecision.explicit;
+
+  List<Person> get _peopleForPicker {
+    final byUuid = <String, Person>{
+      for (final p in widget.people) p.uuid: p,
+      for (final p in _createdPeople) p.uuid: p,
+    };
+    return byUuid.values.toList();
+  }
+
+  Future<void> _onCreatePerson() async {
+    final mentioned = widget.controller.initial.personMentioned.trim();
+    if (mentioned.isEmpty) return;
+
+    final uuid = await showCreatePersonFromCaptureDialog(
+      context: context,
+      ref: ref,
+      suggestedName: mentioned,
+      existingPeople: _peopleForPicker,
+    );
+    if (uuid == null || !mounted) return;
+
+    final created =
+        await ref.read(personRepositoryProvider).getByUuid(uuid);
+    if (created != null &&
+        !_peopleForPicker.any((p) => p.uuid == created.uuid)) {
+      setState(() => _createdPeople.add(created));
+    }
+    widget.controller.updateSelectedPersonUuid(uuid);
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -40,18 +80,13 @@ class CandidateCard extends ConsumerWidget {
             ),
           ),
         PersonPickerField(
-          people: people,
+          people: _peopleForPicker,
           selectedPersonUuid: controller.selectedPersonUuid,
+          personMentioned: controller.initial.personMentioned,
           errorText: controller.personError,
           onChanged: controller.updateSelectedPersonUuid,
+          onCreatePerson: _onCreatePerson,
         ),
-        if (controller.initial.personMentioned.trim().isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Mentioned as: ${controller.initial.personMentioned}',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
         const SizedBox(height: 16),
         DropdownButtonFormField<MemoryCategory>(
           // ignore: deprecated_member_use — value is the stable API in this Flutter pin
@@ -74,7 +109,7 @@ class CandidateCard extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         TextField(
-          controller: eventTextController,
+          controller: widget.eventTextController,
           maxLines: 4,
           decoration: InputDecoration(
             labelText: 'Event',
@@ -143,7 +178,7 @@ class CandidateCard extends ConsumerWidget {
             (controller.dateValueRaw?.isNotEmpty ?? false)) ...[
           const SizedBox(height: 8),
           TextField(
-            controller: dateRawController,
+            controller: widget.dateRawController,
             decoration: const InputDecoration(
               labelText: 'Relative date',
               border: OutlineInputBorder(),

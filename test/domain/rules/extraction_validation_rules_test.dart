@@ -117,4 +117,45 @@ void main() {
     );
     expect(resolveUniquePersonNameMatch(personMentioned: 'Mom', knownPeople: people).uuid, isNull);
   });
+
+  test('hasExactPersonNameMatch is trimmed case-insensitive', () {
+    expect(
+      hasExactPersonNameMatch(
+        personMentioned: ' mom ',
+        knownNames: ['Mom', 'Dad'],
+      ),
+      isTrue,
+    );
+    expect(
+      hasExactPersonNameMatch(
+        personMentioned: 'Priya',
+        knownNames: ['Mom', 'Dad'],
+      ),
+      isFalse,
+    );
+    expect(
+      hasExactPersonNameMatch(
+        personMentioned: '  ',
+        knownNames: ['Mom'],
+      ),
+      isFalse,
+    );
+  });
+
+  test('countExactPersonNameMatches detects ambiguous duplicates', () {
+    expect(
+      countExactPersonNameMatches(
+        personMentioned: 'John',
+        knownNames: ['John', ' john ', 'Dad'],
+      ),
+      2,
+    );
+    expect(
+      countExactPersonNameMatches(
+        personMentioned: 'John',
+        knownNames: ['John Smith', 'Dad'],
+      ),
+      0,
+    );
+  });
 }

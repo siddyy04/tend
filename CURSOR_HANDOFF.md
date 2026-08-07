@@ -11,7 +11,7 @@
 - **Sprint 0 / 1A / 1B / 2A:** Done and closed.
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
 - **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text capture → on-device extraction → confirmation → Isar save**, model setup gate (auto-download primary).
-- **Next work:** **Sprint 2B** — **2B.1–2B.2 done**. Next: **2B.3** Create Person → voice → OCR → share → clarification/confidence polish.
+- **Next work:** **Sprint 2B** — **2B.1–2B.3 done**. Next: **2B.4** Voice → OCR → share → clarification/confidence polish.
 - **Still later:** Sprint 3+ (opportunities, search, sync, settings polish).
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade). Smaller accepted decisions: see `ADR.md`.
 
@@ -149,6 +149,7 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 | Confidence thresholds `0.70` | Starter values; tune with real data |
 | FunctionGemma fine-tune | ARCHITECTURE P1 after real capture examples — not MVP zero-shot default |
 | Create Person during AI Capture | **Sprint 2B core Phase 2B.3** (see `SPRINT2B.md`); similar-name suggestions remain backlog |
+| AI Quality — pronouns / compound sentences | Medium backlog; suite in `EXTRACTION_COMPLETENESS_BENCHMARK.md` — prompt-only, ADR-012 invariant |
 
 ---
 
@@ -185,4 +186,5 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 | `DEVLOG.md` | Human progress notes |
 | `CHANGELOG.md` | User-visible changes |
 | `EVALUATION_TEST.md` | Capture / extraction eval notes |
+| `EXTRACTION_COMPLETENESS_BENCHMARK.md` | Pronoun / compound multi-memory regression cases |
 | `SPRINT2B.md` | Next sprint specification |

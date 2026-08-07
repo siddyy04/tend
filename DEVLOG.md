@@ -129,4 +129,16 @@
 - Multiple: summary (“We found X memories”, person + event lines, Continue, no checkboxes) → multi-card edit with per-card Save toggle (default ON), selection count, dynamic “Save N memories” button; Original Note preserved
 - Routes: `/capture/confirm/summary`, `/capture/confirm/multi`
 
+- Tracked (not blocking 2B.3): AI Quality — pronouns/compound completeness → `BACKLOG.md` + `EXTRACTION_COMPLETENESS_BENCHMARK.md`
+
+### Phase 2B.3 — Create Person during capture
+
+- Confirmation: when `personMentioned` has no exact Circle match (trimmed, case-insensitive), show **Create "&lt;name&gt;"**
+- Dialog: Name / Relationship / Circle; create only on explicit confirm; select new person; stay on confirmation
+- Duplicate exact name → select existing unique match or block ambiguous create
+- Exact unique match still auto-selects (unchanged)
+
+- Prompt: insufficient-information notes must yield zero FunctionCalls (no invent-to-satisfy-tool); regression I1–I6 in `EXTRACTION_COMPLETENESS_BENCHMARK.md`
+- Backlog UX (not implemented): clearer empty-capture copy for insufficient notes
+
 
