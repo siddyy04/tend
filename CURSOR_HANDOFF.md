@@ -11,7 +11,7 @@
 - **Sprint 0 / 1A / 1B / 2A:** Done and closed.
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
 - **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text capture → on-device extraction → confirmation → Isar save**, model setup gate (auto-download primary).
-- **Next work:** **Sprint 2B** (`SPRINT2B.md`) — voice/photo/share, multi-candidate, clarification UI, confidence polish. See also Capture UX backlog (Create Person during AI Capture).
+- **Next work:** **Sprint 2B** (`SPRINT2B.md` §16) — **2B.1 done** (parallel FC multi-memory). Next: **2B.2** multi-memory confirmation → Create Person → voice → OCR → share → clarification/confidence polish.
 - **Still later:** Sprint 3+ (opportunities, search, sync, settings polish).
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade). Smaller accepted decisions: see `ADR.md`.
 
@@ -148,7 +148,7 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 | App theme stub | Still Sprint 0 scaffolding |
 | Confidence thresholds `0.70` | Starter values; tune with real data |
 | FunctionGemma fine-tune | ARCHITECTURE P1 after real capture examples — not MVP zero-shot default |
-| Create Person during AI Capture | Backlog → Sprint 2B / Capture UX |
+| Create Person during AI Capture | **Sprint 2B core Phase 2B.3** (see `SPRINT2B.md`); similar-name suggestions remain backlog |
 
 ---
 
@@ -162,12 +162,13 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 - Do **not** import `flutter_gemma` outside `litert_inference_adapter.dart` (except debug probe)
 - Do **not** reintroduce MediaPipe `.task` / Qwen as a second production engine
 - Do **not** hardcode model install kinds in Capture — keep them on `ModelCatalog`
+- Do **not** change the extraction contract **one FunctionCall → one `ExtractedMemoryCandidate`** (ADR-012); prompt refinements only
 
 ---
 
 ## Quick start prompt for a new chat
 
-> Read `CURSOR_HANDOFF.md`, `ARCHITECTURE.md`, `ADR.md` (especially ADR-010/011), `BACKLOG.md`, `SCHEMA.md`, `FEATURES.md`, `SPRINT2A.md`, and `SPRINT2B.md`. Sprint 2A is **closed**. MVP model is **Gemma 4 E2B** via `ModelCatalog` / LiteRT-LM; E4B optional. **Next: Sprint 2B.** Target `lib/ai/providers/litert/`. Do not implement Suggestion Engine, sync, embeddings persistence, or cascade delete.
+> Read `CURSOR_HANDOFF.md`, `ARCHITECTURE.md`, `ADR.md` (especially ADR-010/011), `BACKLOG.md`, `SCHEMA.md`, `FEATURES.md`, `SPRINT2A.md`, and `SPRINT2B.md` (**§16 phase order**). Sprint 2A is **closed**. MVP model is **Gemma 4 E2B** via `ModelCatalog` / LiteRT-LM; E4B optional. **Next: Sprint 2B starting at Phase 2B.1 (multi-memory extraction).** Do not implement voice/OCR/share/clarification before earlier phases. Do not implement Suggestion Engine, sync, embeddings persistence, or cascade delete.
 
 ---
 

@@ -6,7 +6,11 @@ import 'package:my_first_app/ai/providers/litert/litert_extraction_provider.dart
 import 'package:my_first_app/domain/rules/extraction_validation_rules.dart';
 import 'package:my_first_app/features/circle/circle_providers.dart';
 
-/// Orchestrates text → extract → single-candidate handoff (Sprint 2A).
+/// Orchestrates text → extract → validated candidate handoff.
+///
+/// Sprint 2B.1: returns **all** grounded candidates. Multi-card confirmation
+/// UI is Phase 2B.2 — Capture currently navigates with the full list but the
+/// confirmation screen still drafts the first card until that phase.
 final captureControllerProvider = Provider<CaptureController>((ref) {
   return CaptureController(ref);
 });
@@ -16,11 +20,12 @@ sealed class CaptureSubmitResult {
   const CaptureSubmitResult();
 }
 
-/// First validated candidate ready for the confirmation screen.
+/// Validated candidates ready for the confirmation screen.
 class CaptureSubmitReady extends CaptureSubmitResult {
-  const CaptureSubmitReady(this.candidate);
+  const CaptureSubmitReady(this.candidates)
+      : assert(candidates.length > 0);
 
-  final ExtractedMemoryCandidate candidate;
+  final List<ExtractedMemoryCandidate> candidates;
 }
 
 /// No candidate survived grounding/taxonomy checks.
@@ -48,7 +53,7 @@ class CaptureController {
 
   final Ref _ref;
 
-  /// Runs extraction and returns at most the first validated candidate.
+  /// Runs extraction and returns every validated candidate (Sprint 2B.1).
   Future<CaptureSubmitResult> submitText(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
@@ -131,7 +136,14 @@ class CaptureController {
         return CaptureSubmitEmpty(debugDetail: detail);
       }
 
-      return CaptureSubmitReady(surviving.first);
+      if (kDebugMode && surviving.length > 1) {
+        debugPrint(
+          '[CaptureController] ${surviving.length} candidates survived; '
+          'Phase 2B.2 will show multi-card UI (currently passes full list).',
+        );
+      }
+
+      return CaptureSubmitReady(List.unmodifiable(surviving));
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('[CaptureController] submitText failed: $e\n$st');

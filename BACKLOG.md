@@ -177,11 +177,14 @@ instead of a single combined list.
 ---
 
 ### Create Person during AI Capture
+**Status**
+**Promoted into Sprint 2B core** (Phase **2B.3**) — see `SPRINT2B.md`. Kept here only as a pointer until that phase ships.
+
 **Problem**
 When AI extracts a `personMentioned` that does not match anyone in My Circle, the user must cancel capture, add the person via Sprint 1A flows, and capture again.
 
 **Sprint / area**
-Sprint 2B / Capture UX improvements
+Sprint 2B / Capture UX (core phase 2B.3)
 
 **Proposed solution**
 - On the confirmation screen, show an inline **Add '<person>' to My Circle** option when there is no confident match.
@@ -190,7 +193,7 @@ Sprint 2B / Capture UX improvements
 - Then save the Memory linked to the newly created Person.
 - Never create people automatically without user confirmation.
 
-**Future enhancement (not part of this item)**
+**Future enhancement (not part of Sprint 2B)**
 - If multiple similar people exist (e.g. "John" vs "John Smith"), suggest possible matches before offering to create a new person.
 
 ---

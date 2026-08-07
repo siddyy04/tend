@@ -49,13 +49,13 @@ class LiteRtExtractionProvider implements ExtractionProvider {
         );
       }
 
-      final raw = await adapter.runFunctionCall(
+      final rawCalls = await adapter.runFunctionCalls(
         systemInstruction: bundle.systemInstruction,
         userPrompt: bundle.userPrompt,
         tools: bundle.tools,
       );
 
-      if (raw == null) {
+      if (rawCalls.isEmpty) {
         lastFailureReason =
             adapter.lastDiagnostics?.toString() ?? 'no model response';
         if (kDebugMode) {
@@ -85,32 +85,37 @@ class LiteRtExtractionProvider implements ExtractionProvider {
         return const ExtractionResult(candidates: []);
       }
 
-      if (raw.name != LiteRtPromptBuilder.extractMemoriesToolName) {
-        lastFailureReason = 'unexpected tool name: ${raw.name}';
-        if (kDebugMode) {
-          debugPrint('[LiteRtExtractionProvider] $lastFailureReason');
-        }
-        return const ExtractionResult(candidates: []);
-      }
-
-      if (kDebugMode) {
-        debugPrint(
-          '[LiteRtExtractionProvider] raw args before mapping: ${raw.args}',
-        );
-      }
-
       final knownUuids = {
         for (final person in knownPeople) person.uuid,
       };
 
-      final candidates = _mapCandidates(raw.args, knownPeople, knownUuids, trimmed);
+      final candidates = <ExtractedMemoryCandidate>[];
+      for (final raw in rawCalls) {
+        if (raw.name != LiteRtPromptBuilder.extractMemoriesToolName) {
+          if (kDebugMode) {
+            debugPrint(
+              '[LiteRtExtractionProvider] skipping unexpected tool: ${raw.name}',
+            );
+          }
+          continue;
+        }
+        if (kDebugMode) {
+          debugPrint(
+            '[LiteRtExtractionProvider] raw args before mapping: ${raw.args}',
+          );
+        }
+        candidates.addAll(
+          _mapCandidates(raw.args, knownPeople, knownUuids, trimmed),
+        );
+      }
+
       if (kDebugMode) {
         debugPrint(
           '[LiteRtExtractionProvider] ===== VALIDATION / MAPPING =====',
         );
         debugPrint(
-          'mapped ${candidates.length} candidate(s) '
-          'from args keys=${raw.args.keys.toList()} args=${raw.args}',
+          'mapped ${candidates.length} candidate(s) from ${rawCalls.length} '
+          'function call(s)',
         );
         for (final c in candidates) {
           debugPrint(
@@ -127,7 +132,7 @@ class LiteRtExtractionProvider implements ExtractionProvider {
 
       if (candidates.isEmpty) {
         lastFailureReason =
-            'mapping produced 0 candidates; args=${raw.args}; '
+            'mapping produced 0 candidates from ${rawCalls.length} call(s); '
             'raw=${adapter.lastFullRawResponse}; '
             '${adapter.lastDiagnostics}';
       }

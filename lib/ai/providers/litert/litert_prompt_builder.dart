@@ -36,6 +36,10 @@ class LiteRtPromptBundle {
 /// Schema: person, event, verbatim quote, optional date phrase, and a
 /// [MemoryCategory] enum name. Importance / follow-up / confidence stay
 /// app-owned; invalid categories are rejected at mapping time.
+///
+/// Architectural contract (ADR-012): one native FunctionCall maps to one
+/// [ExtractedMemoryCandidate]. Prompt refinements may improve completeness
+/// but must not bundle multiple memories into a single call.
 class LiteRtPromptBuilder {
   const LiteRtPromptBuilder();
 
@@ -71,7 +75,9 @@ class LiteRtPromptBuilder {
   static const LiteRtToolDefinition _extractMemoriesTool = LiteRtToolDefinition(
     name: extractMemoriesToolName,
     description:
-        'Copy literal facts from the user note only. '
+        'Extract one stable, independently useful memory fact from the note. '
+        'Call this tool once per such memory — including status, progress, '
+        'and recovery updates when they provide lasting relationship context. '
         'Do not invent, infer, or complete missing details. '
         'quoteEvidence must be an exact substring of the note. '
         'If the note contains any explicit or relative temporal phrase, '
@@ -137,7 +143,13 @@ class LiteRtPromptBuilder {
   }) {
     final buffer = StringBuffer();
     buffer.writeln(
-      'Extract only what is literally written. '
+      'Extract every stable, independently useful memory that is literally '
+      'written. Call extract_memories once per such memory '
+      '(same person with several facts → several tool calls; never merge them). '
+      'Do not skip status, progress, or recovery facts when they provide '
+      'meaningful long-term relationship context '
+      '(e.g. recovering well, started physiotherapy, doing better). '
+      'Always use the extract_memories tool — never answer with free text or JSON. '
       'Do not invent follow-ups, importance, or missing facts. '
       'quoteEvidence must be copied exactly from the note. '
       'eventText must be the complete primary clause including the subject '
@@ -154,6 +166,19 @@ class LiteRtPromptBuilder {
       '"saving money in a bank account" → finance; '
       '"moved to another city/country" → milestones; '
       '"visited another city/country" → travel.',
+    );
+    buffer.writeln();
+    buffer.writeln(
+      'Completeness: if one person has several stable facts in the Note, '
+      'emit several extract_memories tool calls (never merge). '
+      'Include recovery/progress/status updates when present in the Note. '
+      'quoteEvidence and eventText must use only words from the Note below — '
+      'never from this instruction text.',
+    );
+    buffer.writeln(
+      'Example pattern: a career fact and a preference about the same person '
+      '→ two tool calls. A surgery fact and a recovering-well fact about the '
+      'same person → two tool calls (do not drop recovering-well).',
     );
     buffer.writeln();
     if (knownPeople.isNotEmpty) {

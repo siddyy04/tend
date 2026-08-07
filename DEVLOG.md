@@ -105,3 +105,22 @@
 - **Next:** Sprint 2B
 
 
+
+## Sprint 2B
+
+### Phase 2B.1 — Multi-memory extraction (parallel FC)
+
+- Device spike (AIN065, Gemma 4 E2B, GPU): parallel FC vs `candidates[]` on 2–4 fact notes + single-fact control
+- **Winner: parallel native function calls** — multi-fact 2/2, 3/3, 4/4 accepted; single-fact 1/1. `candidates[]` matched multi-fact quality but **failed single-fact** (`TextResponse` / markdown JSON protocol break)
+- Implemented: flat tool schema + one-call-per-memory prompt; adapter returns all parallel calls; Capture passes full validated candidate list (confirmation UI still single-card until 2B.2)
+- Spike harness: `lib/debug/multi_memory_spike_main.dart`
+
+- Same-person follow-up spike (`lib/debug/same_person_multi_memory_spike_main.dart`, AIN065/GPU):
+  - Priya career+move+pref+goal: **PASS** 4/4 calls, person=Priya, order OK, no merge/dup
+  - Dad retired+walk: **PASS** 2/2
+  - Mom surgery+physio+follow-up+recovery: **FAIL** — model returned **3/4** calls (dropped “recovering well”); person/dup OK on returned calls; count/order/merge checks failed as cascade
+  - Protocol architecture **locked** as parallel native FC (ADR-012); remaining issues = prompt/model quality
+  - Prompt completeness pass: status/recovery guidance + pattern few-shots (avoid literal example quotes that contaminate grounding)
+  - Mom re-check after prompt tune: **PASS** 4/4 parallel calls (surgery, physio, recovering well, follow-up scan); ~14.6s GPU
+
+

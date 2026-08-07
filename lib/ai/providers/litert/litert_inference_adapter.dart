@@ -145,7 +145,10 @@ class LiteRtInferenceAdapter {
   }
 
   /// Runs extraction via native tool calling (Gemma 4 LiteRT-LM).
-  Future<LiteRtRawFunctionCall?> runFunctionCall({
+  ///
+  /// Returns **all** function calls from a single generate turn. Gemma 4 emits
+  /// [ParallelFunctionCallResponse] for multi-memory notes (Sprint 2B.1).
+  Future<List<LiteRtRawFunctionCall>> runFunctionCalls({
     required String systemInstruction,
     required String userPrompt,
     required List<LiteRtToolDefinition> tools,
@@ -171,7 +174,7 @@ class LiteRtInferenceAdapter {
 
       if (tools.isEmpty) {
         parserBranch = 'no_tools_provided';
-        errorLine = 'runFunctionCall:tools_empty';
+        errorLine = 'runFunctionCalls:tools_empty';
         lastDiagnostics = _diag(
           installInfo: installInfo,
           modelType: modelType,
@@ -186,7 +189,7 @@ class LiteRtInferenceAdapter {
           fullRawResponse: '',
           errorLine: errorLine,
         );
-        return null;
+        return const [];
       }
 
       const systemPromptSent = '';
@@ -219,7 +222,7 @@ class LiteRtInferenceAdapter {
         );
       });
 
-      ModelResponse response = await _generateWithNativeTools(
+      final ModelResponse response = await _generateWithNativeTools(
         model: model,
         userPrompt: extractionUser,
         modelType: modelType,
@@ -236,21 +239,26 @@ class LiteRtInferenceAdapter {
         _dbgChunk(responsePreview.isEmpty ? '(empty string)' : responsePreview);
       });
 
-      LiteRtRawFunctionCall? mapped;
+      final mapped = <LiteRtRawFunctionCall>[];
       if (response is FunctionCallResponse) {
         parserBranch = 'function_call_response';
-        mapped = LiteRtRawFunctionCall(
-          name: response.name,
-          args: _safeStringKeyedMap(response.args) ?? const {},
+        mapped.add(
+          LiteRtRawFunctionCall(
+            name: response.name,
+            args: _safeStringKeyedMap(response.args) ?? const {},
+          ),
         );
       } else if (response is ParallelFunctionCallResponse &&
           response.calls.isNotEmpty) {
         parserBranch = 'parallel_function_call';
-        final first = response.calls.first;
-        mapped = LiteRtRawFunctionCall(
-          name: first.name,
-          args: _safeStringKeyedMap(first.args) ?? const {},
-        );
+        for (final call in response.calls) {
+          mapped.add(
+            LiteRtRawFunctionCall(
+              name: call.name,
+              args: _safeStringKeyedMap(call.args) ?? const {},
+            ),
+          );
+        }
       } else if (response is TextResponse) {
         parserBranch = 'protocol_failure_text_response';
         errorLine = 'expected_FunctionCallResponse_got_TextResponse';
@@ -268,9 +276,10 @@ class LiteRtInferenceAdapter {
       }
 
       if (kDebugMode) {
-        lastParserResultSummary = mapped == null
-            ? 'branch=$parserBranch mapped=null'
-            : 'branch=$parserBranch name=${mapped.name} args=${mapped.args}';
+        lastParserResultSummary = mapped.isEmpty
+            ? 'branch=$parserBranch mapped=0'
+            : 'branch=$parserBranch mapped=${mapped.length} '
+                '${mapped.map((m) => '${m.name}(${m.args})').join(' | ')}';
         _dbgBlock('===== PARSER RESULT =====', () {
           _dbgChunk(lastParserResultSummary!);
         });
@@ -312,7 +321,7 @@ class LiteRtInferenceAdapter {
         fullRawResponse: lastFullRawResponse ?? '',
         errorLine: errorLine,
       );
-      return null;
+      return const [];
     }
   }
 
@@ -576,7 +585,8 @@ class LiteRtInferenceAdapter {
       return '${response.name}(${response.args})';
     }
     if (response is ParallelFunctionCallResponse) {
-      return '${response.calls.length} calls';
+      return '${response.calls.length} parallel calls: '
+          '${response.calls.map((c) => '${c.name}(${c.args})').join(' | ')}';
     }
     return response.toString();
   }

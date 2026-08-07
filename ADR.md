@@ -320,3 +320,29 @@ Qwen 2.5 0.5B via MediaPipe `.task` proved the LiteRT architecture and native fu
 - `flutter_gemma_mediapipe` removed from `pubspec.yaml`.
 - ADR-010’s Qwen default is superseded; LiteRT naming + catalog ownership remain.
 - Benchmark against the prior Qwen 11-prompt suite before locking E2B as the quality baseline.
+
+---
+
+### ADR-012 — Parallel native function calls for multi-memory extraction
+
+**Status**
+Accepted
+
+**Date**
+2026-08-08
+
+**Context**
+Sprint 2B needs multiple memories from one note. Two native FC shapes were spiked on Gemma 4 E2B: parallel flat `extract_memories` calls vs a single call with `candidates[]`. Parallel matched multi-fact quality and preserved the single-fact path; `candidates[]` broke single-fact control (`TextResponse` / markdown JSON). Same-person multi-memory also works under parallel FC; residual misses are prompt/model completeness, not protocol design.
+
+**Decision**
+- **Long-term Tend extraction protocol:** one native function call per stable, independently useful memory (parallel `FunctionCallResponse` / `ParallelFunctionCallResponse`).
+- Keep the **flat** tool parameter schema (no primary `candidates[]` array protocol).
+- **Architectural contract (invariant):** **one FunctionCall → one `ExtractedMemoryCandidate`.** Future prompt refinements may improve extraction completeness, but must not change this mapping (no bundling multiple memories into a single call’s args, no switching to a `candidates[]` primary protocol).
+- Do not reopen alternative extraction protocols without a new ADR.
+- Completeness tuning stays in `LiteRtPromptBuilder` prompts/few-shots; occasional soft-fact omission is accepted as model-quality limitation.
+
+**Consequences**
+- `LiteRtInferenceAdapter.runFunctionCalls` returns all parallel calls.
+- Capture/Confirmation consume `List<ExtractedMemoryCandidate>` produced by mapping each call independently.
+- Spike harnesses under `lib/debug/` may compare protocols for research, but production stays parallel-flat.
+- Prompt-only changes are allowed without an ADR; protocol/shape changes require a new ADR.
