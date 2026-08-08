@@ -189,6 +189,7 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
           title: const Text('Photo capture'),
           leading: IconButton(
             icon: const Icon(Icons.close),
+            tooltip: 'Cancel photo capture',
             onPressed: _busy ? null : _onCancel,
           ),
         ),
@@ -208,25 +209,37 @@ class _PhotoCaptureScreenState extends ConsumerState<PhotoCaptureScreen> {
                       Text(_message!, style: theme.textTheme.bodyMedium),
                     ],
                     const Spacer(),
-                    FilledButton.icon(
-                      onPressed: _busy
-                          ? null
-                          : () => unawaited(_pick(ImageSource.camera)),
-                      icon: const Icon(Icons.photo_camera_outlined),
-                      label: const Text('Take photo'),
+                    Semantics(
+                      button: true,
+                      label: 'Take photo with camera',
+                      child: FilledButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => unawaited(_pick(ImageSource.camera)),
+                        icon: const Icon(Icons.photo_camera_outlined),
+                        label: const Text('Take photo'),
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _busy
-                          ? null
-                          : () => unawaited(_pick(ImageSource.gallery)),
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text('Choose from gallery'),
+                    Semantics(
+                      button: true,
+                      label: 'Choose photo from gallery',
+                      child: OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => unawaited(_pick(ImageSource.gallery)),
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: const Text('Choose from gallery'),
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _busy ? null : _onCancel,
-                      child: const Text('Cancel'),
+                    Semantics(
+                      button: true,
+                      label: 'Cancel photo capture',
+                      child: TextButton(
+                        onPressed: _busy ? null : _onCancel,
+                        child: const Text('Cancel'),
+                      ),
                     ),
                   ],
                 ),

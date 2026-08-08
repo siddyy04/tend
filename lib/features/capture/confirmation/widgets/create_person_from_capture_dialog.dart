@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:my_first_app/core/analytics/capture_analytics.dart';
 import 'package:my_first_app/core/constants/circle_tier_labels.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/core/constants/person_defaults.dart';
@@ -125,12 +126,16 @@ class _CreatePersonFromCaptureDialogState
         ..deletedAt = null;
 
       await widget.ref.read(personRepositoryProvider).create(person);
+      widget.ref
+          .read(captureAnalyticsProvider)
+          .personCreatedDuringConfirmation();
       if (!mounted) return;
       Navigator.of(context).pop(person.uuid);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _formError = 'Could not create person: $e';
+        _formError =
+            'Could not create this person. Please try again.';
         _saving = false;
       });
     }

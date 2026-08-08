@@ -10,6 +10,7 @@ import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/features/capture/capture_submit_flow.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_args.dart';
 import 'package:my_first_app/features/capture/widgets/capture_empty_memories_panel.dart';
+import 'package:my_first_app/features/capture/widgets/capture_extracting_status.dart';
 
 /// Global capture screen (text + voice + photo ingress).
 class CaptureScreen extends ConsumerStatefulWidget {
@@ -49,6 +50,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   }
 
   Future<void> _onContinue() async {
+    if (_submitting) return;
     FocusScope.of(context).unfocus();
     setState(() {
       _submitting = true;
@@ -196,15 +198,19 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               ],
               if (!_showEmptyPanel) ...[
                 const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: canSubmit ? _onContinue : null,
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Continue'),
+                if (_submitting) ...[
+                  const CaptureExtractingStatus(),
+                  const SizedBox(height: 12),
+                ],
+                Semantics(
+                  button: true,
+                  label: 'Continue to extract memories',
+                  child: FilledButton(
+                    onPressed: canSubmit ? _onContinue : null,
+                    child: _submitting
+                        ? const CaptureExtractingButtonChild()
+                        : const Text('Continue'),
+                  ),
                 ),
               ],
             ],

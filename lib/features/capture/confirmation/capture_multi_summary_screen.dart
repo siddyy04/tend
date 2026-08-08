@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_first_app/app/app_routes.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_args.dart';
+import 'package:my_first_app/features/capture/confirmation/widgets/capture_found_memories_banner.dart';
+import 'package:my_first_app/features/capture/confirmation/widgets/clarification_note.dart';
 import 'package:my_first_app/features/capture/confirmation/widgets/original_note_section.dart';
 
 /// Lightweight multi-memory summary before editable confirmation (Sprint 2B.2).
-///
-/// No checkboxes — Continue opens the multi-card review screen.
-class CaptureMultiSummaryScreen extends StatelessWidget {
+class CaptureMultiSummaryScreen extends StatefulWidget {
   const CaptureMultiSummaryScreen({
     super.key,
     required this.args,
@@ -16,7 +16,28 @@ class CaptureMultiSummaryScreen extends StatelessWidget {
   final CaptureConfirmationArgs args;
 
   @override
+  State<CaptureMultiSummaryScreen> createState() =>
+      _CaptureMultiSummaryScreenState();
+}
+
+class _CaptureMultiSummaryScreenState extends State<CaptureMultiSummaryScreen> {
+  var _navigating = false;
+
+  Future<void> _onContinue() async {
+    if (_navigating) return;
+    setState(() => _navigating = true);
+    await context.push(
+      AppRoutes.captureConfirmMulti,
+      extra: widget.args,
+    );
+    if (mounted) {
+      setState(() => _navigating = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final args = widget.args;
     final count = args.candidates.length;
     final theme = Theme.of(context);
 
@@ -28,6 +49,8 @@ class CaptureMultiSummaryScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            CaptureFoundMemoriesBanner(count: count),
+            const SizedBox(height: 16),
             Text(
               'We found $count memories',
               style: theme.textTheme.headlineSmall,
@@ -37,6 +60,10 @@ class CaptureMultiSummaryScreen extends StatelessWidget {
               'Continue to review and edit each one before saving.',
               style: theme.textTheme.bodyMedium,
             ),
+            if (args.clarificationNeeded.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              ClarificationNote(items: args.clarificationNeeded),
+            ],
             const SizedBox(height: 16),
             OriginalNoteSection(originalText: args.originalText),
             const SizedBox(height: 20),
@@ -51,14 +78,19 @@ class CaptureMultiSummaryScreen extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 28),
-            FilledButton(
-              onPressed: () {
-                context.push(
-                  AppRoutes.captureConfirmMulti,
-                  extra: args,
-                );
-              },
-              child: const Text('Continue'),
+            Semantics(
+              button: true,
+              label: 'Continue to review memories',
+              child: FilledButton(
+                onPressed: _navigating ? null : _onContinue,
+                child: _navigating
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Continue'),
+              ),
             ),
           ],
         ),

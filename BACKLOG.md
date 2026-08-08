@@ -73,6 +73,23 @@ User speaks for several minutes. Tend continuously segments speech into memory c
 
 ---
 
+### Beta APK dart-defines (2B.8 RC)
+**Priority:** High  
+**Problem:** Release/debug APKs built without `--dart-define=SUPABASE_URL` / `SUPABASE_ANON_KEY` show a fatal startup error.  
+**Future work:** Bake defines into CI / signed beta pipeline; document in release checklist.
+
+### Warm share interrupts in-progress capture (2B.8 RC)
+**Priority:** Medium  
+**Problem:** Incoming share uses `router.go` and can replace an active capture/confirm stack.  
+**Future work:** Debounce / confirm-before-navigate when a capture draft is dirty.
+
+### Auth “missing email or phone” copy (2B.8 RC)
+**Priority:** Low  
+**Problem:** Empty sign-in validation can surface slightly technical wording.  
+**Future work:** Humanize to “Enter your email and password.”
+
+---
+
 ### Person → memory cascade delete
 **Problem**
 `FEATURES.md` requires deleting a person to cascade to their memories, follow-ups, and suggestion history. Sprint 1B intentionally deferred this.
@@ -81,11 +98,13 @@ User speaks for several minutes. Tend continuously segments speech into memory c
 - When a Person is soft-deleted, also soft-delete related Memories (and later FollowUps / suggestion history).
 - Keep tombstones; never hard-delete in early sprints.
 - Likely fits Sprint 6 data-controls work unless re-prioritized earlier.
-- Resolve `FollowUp.deletedAt` SCHEMA vs ARCHITECTURE mismatch before cascading to FollowUps.
+- **Resolved (Foundation Cleanup):** `FollowUp.deletedAt` is now on Isar + Postgres schema (aligned with ARCHITECTURE).
 
 ---
 
 ### PersonRepository.getByUuid hides soft-deleted records
+**Status:** Resolved — Foundation Cleanup (pre-Sprint 3). `getByUuid` now filters `uuidEqualTo` + `deletedAtIsNull`, matching MemoryRepository.
+
 **Problem**
 `MemoryRepository.getByUuid` excludes soft-deleted rows at the Isar query layer. `PersonRepository.getByUuid` still returns tombstoned people via the unique-index helper.
 
@@ -427,6 +446,8 @@ Sprint 2B.5 stores images under `documents/captures/` as `sourceRef`; retention 
 ---
 
 ### AI / Date Resolution
+**Status:** Resolved — Foundation Cleanup (pre-Sprint 3). `resolveRelativeDate()` in `domain/rules/date_resolution_rules.dart` anchors to `Memory.createdAt`; wired on both Memory save paths + one-time startup backfill.
+
 **Problem**
 Relative date phrases are stored as `dateValueRaw` only. Confirmation and later features benefit from an absolute `dateValue` derived from the device clock.
 
@@ -607,6 +628,7 @@ This was intentionally deferred from Sprint 1B.
 
 ## Repository consistency
 **Priority:** High
+**Status:** Resolved — Foundation Cleanup (pre-Sprint 3). PersonRepository aligned with MemoryRepository soft-delete filtering.
 
 **Problem**
 `PersonRepository.getByUuid()` may still return soft-deleted people.
@@ -640,6 +662,7 @@ Complete the application theme once the visual design is finalized.
 
 ## FollowUp schema review
 **Priority:** Medium
+**Status:** Resolved — Foundation Cleanup (pre-Sprint 3). Added `deletedAt` / `deleted_at` to SCHEMA Isar + Postgres `follow_ups`, matching ARCHITECTURE soft-delete contract. Zero FollowUp rows — no data migration.
 
 **Problem**
 The architecture notes and schema differ regarding `FollowUp.deletedAt`.

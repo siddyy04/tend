@@ -167,7 +167,14 @@
 - Failure only for genuine pipeline issues (`lastPipelineFailureReason` / exceptions)
 - Prompt: no placeholders (N/A/None/Unknown/-); zero calls when no person + stable memory
 
-### Phase 2B.6 — Share to Tend
+### Phase 2B.7 — Capture UX Polish
+
+- `ClarificationNeeded` on `ExtractionResult` / confirmation args; populated only for ambiguous exact Circle names
+- Passive `ClarificationNote` (passive); `NeedsReviewChip` when below threshold (no High/Medium badges)
+- Found-memories banner on confirmation; extracting status on Typed/Voice/OCR/Share
+- `CaptureAnalytics` hooks (started/completed/duration/counts/edited/person-created)
+- Next gate: **Sprint 2B.8 RC** (`SPRINT2B8.md`) — explicit exit criteria + `RELEASE_READINESS_REPORT.md` (Go for ~100 beta) before Sprint 3
+
 
 - Android `SEND` `text/*` intent-filter; `launchMode=singleTask`
 - `PlatformShareIntentHandler` (`receive_sharing_intent`) → pending share → `/capture/share`
@@ -176,4 +183,19 @@
 - Editable shared text → `CaptureSubmitFlow` with `SourceType.share`; shared empty-state panel
 - Backlog: share images→OCR, PDFs, multi-item, HTML cleanup, article extraction, email metadata, threads, audio→voice, share analytics
 
+## Foundation Cleanup — pre-Sprint 3
+
+- Item A: `FollowUp.deletedAt` / Postgres `deleted_at` — SCHEMA + Isar collection aligned with ARCHITECTURE (zero rows; no data migration)
+- Item C: `PersonRepository.getByUuid` filters soft-deletes (`uuidEqualTo` + `deletedAtIsNull`); unit test added
+- Item B: `resolveRelativeDate` / `resolveDateValueForPersistence` in `domain/rules/`; wired on confirmation + memory form saves; one-time prefs-gated backfill on startup (`migration_relative_date_backfill_v1`)
+- Docs: BACKLOG entries resolved; CHANGELOG/CURSOR_HANDOFF updated
+- Next remains **2B.8 RC** — cleanup does not replace or bypass the Release Candidate gate
+
+## Sprint 2B.8 — Capture Release Candidate
+
+- RC hardening: R8 ProGuard for ML Kit optional packs; human multi-confirm errors; double-submit guards; STT error forwarding; Share log gating; Voice/Photo a11y labels
+- Device QA (AIN065, Android 16, GPU): grounding probe 11/11; warmAvg≈6.3s; coldStart≈11.3s; peakRss≈1.15 GB; Typed full path + Share cold-start verified
+- Owner smokes (2026-08-08): Voice→Save, OCR→Save, airplane-mode extract — no release-blocking issues; Conditional Pass conditions satisfied
+- `RELEASE_READINESS_REPORT.md`: **Go** (product sign-off recorded). Sprint 2 closed.
+- Next: **Sprint 3 planning** (architecture review) — no Sprint 3 implementation until plan is approved
 

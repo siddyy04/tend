@@ -281,3 +281,33 @@ int countExactPersonNameMatches({
   }
   return count;
 }
+
+/// Passive notes when Circle has multiple exact matches for a mention (2B.7).
+///
+/// Does not cover missing dates/categories/importance or low confidence.
+List<ClarificationNeeded> ambiguousPersonClarifications({
+  required Iterable<ExtractedMemoryCandidate> candidates,
+  required Iterable<String> knownNames,
+}) {
+  final seen = <String>{};
+  final out = <ClarificationNeeded>[];
+  for (final candidate in candidates) {
+    final mention = candidate.personMentioned.trim();
+    if (mention.isEmpty) continue;
+    final key = mention.toLowerCase();
+    if (!seen.add(key)) continue;
+    final matches = countExactPersonNameMatches(
+      personMentioned: mention,
+      knownNames: knownNames,
+    );
+    if (matches > 1) {
+      out.add(
+        ClarificationNeeded(
+          reason: 'Which "$mention" did you mean?',
+          rawSnippet: mention,
+        ),
+      );
+    }
+  }
+  return out;
+}

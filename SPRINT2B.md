@@ -286,7 +286,8 @@ Implement **only** in this order. Do not skip ahead to voice/OCR/share/clarifica
 | **2B.4** | Voice capture | **Done.** Platform STT → editable transcript → existing extract/confirm; `sourceType=voice`; audio `sourceRef` backlog | **High** | OS ASR variance; file retention debt; RAM with model loaded |
 | **2B.5** | OCR / Photo capture | **Done.** ML Kit OCR → editable text → existing extract/confirm; `sourceType=photo` + local image `sourceRef` | **High** | Empty OCR; permissions; avoid scene captioning scope creep |
 | **2B.6** | Share to Tend | **Done.** Android SEND text → editable Share Capture → existing extract/confirm; `sourceType=share` | **Medium–High** | Cold-start pending share + auth redirect; package id not yet exposed by plugin |
-| **2B.7** | Clarification + confidence polish | Add `clarificationNeeded` only once multi-extract is understood; passive note; confidence badge polish | **Low–Medium** | Explicitly last — implement clarification only when genuinely needed |
+| **2B.7** | Clarification + confidence polish | **Done.** Ambiguous-name clarification notes; Needs review chip; loading/confirm polish; analytics hooks | **Low–Medium** | Next: **2B.8 RC** (not Sprint 3) |
+| **2B.8** | Capture RC stabilization | Release-candidate QA + **explicit exit criteria** + `RELEASE_READINESS_REPORT.md` | **Medium–High** | Sprint 3 only after Report = **Go** |
 
 ### Dependency sketch
 
@@ -298,6 +299,7 @@ Implement **only** in this order. Do not skip ahead to voice/OCR/share/clarifica
         → 2B.5 OCR / Photo
           → 2B.6 Share to Tend
             → 2B.7 Clarification + confidence polish
+              → 2B.8 Capture **RC** stabilization (gate before Sprint 3 / external beta)
 ```
 
 ### Phase gate before 2B.4

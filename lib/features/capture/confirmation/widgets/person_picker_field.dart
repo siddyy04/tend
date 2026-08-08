@@ -79,8 +79,7 @@ class PersonPickerField extends StatelessWidget {
         if (_showAmbiguousMatchMessage) ...[
           const SizedBox(height: 8),
           Text(
-            'Multiple people named "$mentioned" were found. '
-            'Please choose the correct person.',
+            'Which "$mentioned" did you mean? Choose the correct person.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

@@ -28,50 +28,55 @@ const FollowUpSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'expectedDate': PropertySchema(
+    r'deletedAt': PropertySchema(
       id: 2,
+      name: r'deletedAt',
+      type: IsarType.dateTime,
+    ),
+    r'expectedDate': PropertySchema(
+      id: 3,
       name: r'expectedDate',
       type: IsarType.dateTime,
     ),
     r'importanceScoreSnapshot': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'importanceScoreSnapshot',
       type: IsarType.long,
     ),
     r'memoryUuid': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'memoryUuid',
       type: IsarType.string,
     ),
-    r'note': PropertySchema(id: 5, name: r'note', type: IsarType.string),
+    r'note': PropertySchema(id: 6, name: r'note', type: IsarType.string),
     r'personUuid': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'personUuid',
       type: IsarType.string,
     ),
     r'resolvedAt': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'resolvedAt',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'status',
       type: IsarType.byte,
       enumMap: _FollowUpstatusEnumValueMap,
     ),
     r'syncStatus': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'syncStatus',
       type: IsarType.byte,
       enumMap: _FollowUpsyncStatusEnumValueMap,
     ),
     r'updatedAt': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
-    r'uuid': PropertySchema(id: 11, name: r'uuid', type: IsarType.string),
+    r'uuid': PropertySchema(id: 12, name: r'uuid', type: IsarType.string),
   },
 
   estimateSize: _followUpEstimateSize,
@@ -168,16 +173,17 @@ void _followUpSerialize(
 ) {
   writer.writeByte(offsets[0], object.categorySnapshot.index);
   writer.writeDateTime(offsets[1], object.createdAt);
-  writer.writeDateTime(offsets[2], object.expectedDate);
-  writer.writeLong(offsets[3], object.importanceScoreSnapshot);
-  writer.writeString(offsets[4], object.memoryUuid);
-  writer.writeString(offsets[5], object.note);
-  writer.writeString(offsets[6], object.personUuid);
-  writer.writeDateTime(offsets[7], object.resolvedAt);
-  writer.writeByte(offsets[8], object.status.index);
-  writer.writeByte(offsets[9], object.syncStatus.index);
-  writer.writeDateTime(offsets[10], object.updatedAt);
-  writer.writeString(offsets[11], object.uuid);
+  writer.writeDateTime(offsets[2], object.deletedAt);
+  writer.writeDateTime(offsets[3], object.expectedDate);
+  writer.writeLong(offsets[4], object.importanceScoreSnapshot);
+  writer.writeString(offsets[5], object.memoryUuid);
+  writer.writeString(offsets[6], object.note);
+  writer.writeString(offsets[7], object.personUuid);
+  writer.writeDateTime(offsets[8], object.resolvedAt);
+  writer.writeByte(offsets[9], object.status.index);
+  writer.writeByte(offsets[10], object.syncStatus.index);
+  writer.writeDateTime(offsets[11], object.updatedAt);
+  writer.writeString(offsets[12], object.uuid);
 }
 
 FollowUp _followUpDeserialize(
@@ -193,21 +199,22 @@ FollowUp _followUpDeserialize(
       )] ??
       MemoryCategory.family;
   object.createdAt = reader.readDateTime(offsets[1]);
-  object.expectedDate = reader.readDateTimeOrNull(offsets[2]);
+  object.deletedAt = reader.readDateTimeOrNull(offsets[2]);
+  object.expectedDate = reader.readDateTimeOrNull(offsets[3]);
   object.id = id;
-  object.importanceScoreSnapshot = reader.readLong(offsets[3]);
-  object.memoryUuid = reader.readString(offsets[4]);
-  object.note = reader.readStringOrNull(offsets[5]);
-  object.personUuid = reader.readString(offsets[6]);
-  object.resolvedAt = reader.readDateTimeOrNull(offsets[7]);
+  object.importanceScoreSnapshot = reader.readLong(offsets[4]);
+  object.memoryUuid = reader.readString(offsets[5]);
+  object.note = reader.readStringOrNull(offsets[6]);
+  object.personUuid = reader.readString(offsets[7]);
+  object.resolvedAt = reader.readDateTimeOrNull(offsets[8]);
   object.status =
-      _FollowUpstatusValueEnumMap[reader.readByteOrNull(offsets[8])] ??
+      _FollowUpstatusValueEnumMap[reader.readByteOrNull(offsets[9])] ??
       FollowUpStatus.open;
   object.syncStatus =
-      _FollowUpsyncStatusValueEnumMap[reader.readByteOrNull(offsets[9])] ??
+      _FollowUpsyncStatusValueEnumMap[reader.readByteOrNull(offsets[10])] ??
       SyncStatus.pending;
-  object.updatedAt = reader.readDateTime(offsets[10]);
-  object.uuid = reader.readString(offsets[11]);
+  object.updatedAt = reader.readDateTime(offsets[11]);
+  object.uuid = reader.readString(offsets[12]);
   return object;
 }
 
@@ -229,26 +236,28 @@ P _followUpDeserializeProp<P>(
     case 2:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
-    case 4:
-      return (reader.readString(offset)) as P;
-    case 5:
-      return (reader.readStringOrNull(offset)) as P;
-    case 6:
-      return (reader.readString(offset)) as P;
-    case 7:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 4:
+      return (reader.readLong(offset)) as P;
+    case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readString(offset)) as P;
     case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 9:
       return (_FollowUpstatusValueEnumMap[reader.readByteOrNull(offset)] ??
               FollowUpStatus.open)
           as P;
-    case 9:
+    case 10:
       return (_FollowUpsyncStatusValueEnumMap[reader.readByteOrNull(offset)] ??
               SyncStatus.pending)
           as P;
-    case 10:
-      return (reader.readDateTime(offset)) as P;
     case 11:
+      return (reader.readDateTime(offset)) as P;
+    case 12:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -905,6 +914,81 @@ extension FollowUpQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'createdAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterFilterCondition> deletedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'deletedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterFilterCondition> deletedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'deletedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterFilterCondition> deletedAtEqualTo(
+    DateTime? value,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'deletedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterFilterCondition> deletedAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'deletedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterFilterCondition> deletedAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'deletedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterFilterCondition> deletedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'deletedAt',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -1990,6 +2074,18 @@ extension FollowUpQuerySortBy on QueryBuilder<FollowUp, FollowUp, QSortBy> {
     });
   }
 
+  QueryBuilder<FollowUp, FollowUp, QAfterSortBy> sortByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterSortBy> sortByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<FollowUp, FollowUp, QAfterSortBy> sortByExpectedDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'expectedDate', Sort.asc);
@@ -2136,6 +2232,18 @@ extension FollowUpQuerySortThenBy
   QueryBuilder<FollowUp, FollowUp, QAfterSortBy> thenByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterSortBy> thenByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<FollowUp, FollowUp, QAfterSortBy> thenByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
     });
   }
 
@@ -2288,6 +2396,12 @@ extension FollowUpQueryWhereDistinct
     });
   }
 
+  QueryBuilder<FollowUp, FollowUp, QDistinct> distinctByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deletedAt');
+    });
+  }
+
   QueryBuilder<FollowUp, FollowUp, QDistinct> distinctByExpectedDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'expectedDate');
@@ -2376,6 +2490,12 @@ extension FollowUpQueryProperty
   QueryBuilder<FollowUp, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<FollowUp, DateTime?, QQueryOperations> deletedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deletedAt');
     });
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ai/providers/litert/litert_inference_adapter.dart';
 import 'app/app.dart';
 import 'data/local/isar/isar_provider.dart';
+import 'data/local/isar/migrations/relative_date_backfill.dart';
 import 'data/remote/supabase/supabase_client.dart';
 
 /// Application entrypoint.
@@ -17,6 +18,8 @@ Future<void> main() async {
   try {
     await initializeSupabase();
     final isar = await initializeIsar();
+    // Foundation Cleanup Item B — one-time relative dateValue backfill.
+    await runRelativeDateBackfillIfNeeded(isar);
 
     runApp(
       ProviderScope(

@@ -11,6 +11,7 @@ class CaptureConfirmationArgs {
     required this.originalText,
     this.sourceType = SourceType.text,
     this.sourceRef,
+    this.clarificationNeeded = const [],
   }) : assert(candidates.length > 0);
 
   final List<ExtractedMemoryCandidate> candidates;
@@ -23,6 +24,9 @@ class CaptureConfirmationArgs {
 
   /// Optional local file path for voice/photo captures.
   final String? sourceRef;
+
+  /// Passive notes (ambiguous person names). Never blocks save.
+  final List<ClarificationNeeded> clarificationNeeded;
 
   bool get isSingle => candidates.length == 1;
 

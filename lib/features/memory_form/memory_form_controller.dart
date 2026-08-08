@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/core/constants/memory_defaults.dart';
 import 'package:my_first_app/data/local/isar/collections/memory.dart';
+import 'package:my_first_app/domain/rules/date_resolution_rules.dart';
 import 'package:my_first_app/domain/rules/memory_sensitivity_rules.dart';
 import 'package:my_first_app/domain/validators/memory_validators.dart';
 import 'package:my_first_app/features/person_profile/person_profile_providers.dart';
@@ -149,12 +150,17 @@ class MemoryFormController extends AsyncNotifier<void> {
     final sensitivity = defaultSensitivityForCategory(selectedCategory);
     final precision =
         dateEnabled ? DatePrecision.explicit : DatePrecision.none;
-    final resolvedDate = dateEnabled ? dateValue : null;
 
     try {
       final repo = ref.read(memoryRepositoryProvider);
 
       if (memoryUuid == null) {
+        final persistedDateValue = resolveDateValueForPersistence(
+          datePrecision: precision,
+          dateValue: dateEnabled ? dateValue : null,
+          dateValueRaw: null,
+          anchorDate: now,
+        );
         final memory = Memory()
           ..uuid = const Uuid().v4()
           ..personUuid = personUuid
@@ -163,7 +169,7 @@ class MemoryFormController extends AsyncNotifier<void> {
           ..quoteEvidence = null
           ..datePrecision = precision
           ..dateValueRaw = null
-          ..dateValue = resolvedDate
+          ..dateValue = persistedDateValue
           ..importanceScore = importanceScore
           ..extractionConfidence = null
           ..personMatchConfidence = null
@@ -182,13 +188,20 @@ class MemoryFormController extends AsyncNotifier<void> {
         if (memory == null) {
           throw StateError('Memory not found: $memoryUuid');
         }
+        // Anchor relative resolution to original capture time, not wall-clock now.
+        final persistedDateValue = resolveDateValueForPersistence(
+          datePrecision: precision,
+          dateValue: dateEnabled ? dateValue : null,
+          dateValueRaw: null,
+          anchorDate: memory.createdAt,
+        );
         // uuid and personUuid are immutable after creation.
         memory
           ..category = selectedCategory
           ..eventText = trimmedEvent
           ..datePrecision = precision
           ..dateValueRaw = null
-          ..dateValue = resolvedDate
+          ..dateValue = persistedDateValue
           ..importanceScore = importanceScore
           ..sensitivityFlag = sensitivity
           ..updatedAt = now

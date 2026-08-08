@@ -158,4 +158,50 @@ void main() {
       0,
     );
   });
+
+  group('ambiguousPersonClarifications', () {
+    ExtractedMemoryCandidate mention(String name) {
+      return ExtractedMemoryCandidate(
+        personMentioned: name,
+        personMatchUuid: null,
+        personMatchConfidence: 0,
+        category: MemoryCategory.preferences,
+        eventText: 'event',
+        quoteEvidence: '$name event',
+        datePrecision: DatePrecision.none,
+        dateValueRaw: null,
+        dateValue: null,
+        importanceScore: 3,
+        extractionConfidence: 1,
+        followUpSuggested: false,
+        followUpNote: null,
+      );
+    }
+
+    test('emits which-person note when multiple exact Circle matches', () {
+      final notes = ambiguousPersonClarifications(
+        candidates: [mention('John'), mention('Sarah')],
+        knownNames: const ['John', 'john', 'Sarah'],
+      );
+      expect(notes, hasLength(1));
+      expect(notes.single.reason, 'Which "John" did you mean?');
+      expect(notes.single.rawSnippet, 'John');
+    });
+
+    test('emits nothing for unique or zero matches', () {
+      final notes = ambiguousPersonClarifications(
+        candidates: [mention('Pooja'), mention('Unknown')],
+        knownNames: const ['Pooja', 'Mom'],
+      );
+      expect(notes, isEmpty);
+    });
+
+    test('dedupes repeated mentions of the same ambiguous name', () {
+      final notes = ambiguousPersonClarifications(
+        candidates: [mention('John'), mention('john')],
+        knownNames: const ['John', 'JOHN'],
+      );
+      expect(notes, hasLength(1));
+    });
+  });
 }

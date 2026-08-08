@@ -14,6 +14,7 @@ class PlatformTranscriptionProvider implements TranscriptionProvider {
   var _initialized = false;
   String _sessionWords = '';
   var _listening = false;
+  void Function(String error)? _activeOnError;
 
   @override
   Future<bool> isAvailable() async {
@@ -27,7 +28,12 @@ class PlatformTranscriptionProvider implements TranscriptionProvider {
     }
     _initialized = true;
     return _speech.initialize(
-      onError: (_) {},
+      onError: (error) {
+        final message = error.errorMsg.trim().isEmpty
+            ? 'Speech recognition failed. Please try again.'
+            : error.errorMsg;
+        _activeOnError?.call(message);
+      },
       onStatus: (_) {},
     );
   }
@@ -76,6 +82,7 @@ class PlatformTranscriptionProvider implements TranscriptionProvider {
     }
     _sessionWords = '';
     _listening = true;
+    _activeOnError = onError;
     await _speech.listen(
       onResult: (result) {
         final words = result.recognizedWords.trim();
@@ -101,6 +108,7 @@ class PlatformTranscriptionProvider implements TranscriptionProvider {
       await _speech.stop();
       _listening = false;
     }
+    _activeOnError = null;
     final text = _sessionWords.trim();
     _sessionWords = '';
     return text;
@@ -112,6 +120,7 @@ class PlatformTranscriptionProvider implements TranscriptionProvider {
       await _speech.cancel();
       _listening = false;
     }
+    _activeOnError = null;
     _sessionWords = '';
   }
 }

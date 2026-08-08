@@ -6,6 +6,74 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.11 — Capture Release Candidate (Sprint 2B.8)
+
+## Fixed
+
+- Release APK builds (R8 / ML Kit optional script packages)
+- Multi-confirm no longer surfaces raw exception text
+- Double-submit guards on capture Continue / multi Continue / confirmation Save
+- Voice STT errors surface in the recording UI
+- Share intent bootstrap no longer logs stacks in release
+
+## Changed
+
+- Accessibility labels on Voice Stop/Cancel and Photo primary actions
+- RC documentation: `RELEASE_READINESS_REPORT.md` (Conditional Pass / Go)
+
+## Notes
+
+- No new capture features; LiteRT protocol unchanged
+- Owner sign-off 2026-08-08: Conditional Pass conditions satisfied; **Go** for ~100 beta
+- **Next: Sprint 3 planning** (architecture review) — no Sprint 3 implementation yet
+
+---
+
+# Foundation Cleanup — pre-Sprint 3
+
+## Fixed
+
+- `PersonRepository.getByUuid()` now excludes soft-deleted people (aligned with MemoryRepository)
+- Relative date phrases (`dateValueRaw`) resolve to `dateValue` on Memory save (manual + AI confirmation), anchored to `createdAt`
+- One-time idempotent startup backfill for existing relative memories with null `dateValue`
+
+## Changed
+
+- `FollowUp` schema contract: `deletedAt` / Postgres `deleted_at` added (Isar collection + SCHEMA.md) — no FollowUp rows existed
+
+## Notes
+
+- No new features or FollowUp-writing code
+- Next remains **Sprint 2B.8** RC gate (not Sprint 3)
+
+---
+
+# v0.3.10 — Capture UX Polish (Sprint 2B.7)
+
+## Added
+
+### Confirmation
+- Passive notes when multiple Circle people share the same name (“Which John?”)
+- Subtle “Found N memories to review” banner after successful extraction
+- Lightweight **Needs review** chip when extraction confidence is below threshold
+
+### Capture
+- Shared “Finding memories…” loading status on Typed, Voice, OCR, and Share
+- Capture analytics hooks (debug no-op until product analytics ships)
+
+## Changed
+
+- Confirmation spacing, button hierarchy, multi-memory labels, and success snackbars
+- Ambiguous person picker copy aligned with clarification notes
+- Human-only error strings on confirmation save failures
+
+## Notes
+
+- No AI protocol or confidence-threshold changes
+- Next: **Sprint 2B.8** Capture stabilization (not Sprint 3)
+
+---
+
 # v0.3.9 — Share to Tend (Sprint 2B.6)
 
 ## Added

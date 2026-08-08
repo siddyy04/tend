@@ -51,19 +51,26 @@ class CaptureSubmitFlow {
     }
 
     final result =
-        await ref.read(captureControllerProvider).submitText(text);
+        await ref.read(captureControllerProvider).submitText(
+              text,
+              sourceType: sourceType,
+            );
 
     if (!context.mounted) {
       return const CaptureSubmitFlowOutcome.cancelled();
     }
 
     switch (result) {
-      case CaptureSubmitReady(:final candidates):
+      case CaptureSubmitReady(
+          :final candidates,
+          :final clarificationNeeded,
+        ):
         final args = CaptureConfirmationArgs(
           candidates: candidates,
           originalText: text,
           sourceType: sourceType,
           sourceRef: sourceRef,
+          clarificationNeeded: clarificationNeeded,
         );
         final route = args.isSingle
             ? AppRoutes.captureConfirm

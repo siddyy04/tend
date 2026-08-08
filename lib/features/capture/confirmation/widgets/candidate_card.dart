@@ -5,6 +5,7 @@ import 'package:my_first_app/core/constants/memory_category_labels.dart';
 import 'package:my_first_app/data/local/isar/collections/person.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_controller.dart';
 import 'package:my_first_app/features/capture/confirmation/widgets/create_person_from_capture_dialog.dart';
+import 'package:my_first_app/features/capture/confirmation/widgets/needs_review_chip.dart';
 import 'package:my_first_app/features/capture/confirmation/widgets/person_picker_field.dart';
 import 'package:my_first_app/features/circle/circle_providers.dart';
 
@@ -70,14 +71,9 @@ class _CandidateCardState extends ConsumerState<CandidateCard> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (controller.showLowConfidenceLabel)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Please double-check this memory before saving.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: NeedsReviewChip(),
           ),
         PersonPickerField(
           people: _peopleForPicker,

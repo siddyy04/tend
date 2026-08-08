@@ -52,3 +52,8 @@ app.*.map.json
 /models/
 *.litertlm
 *.task
+
+# Isar native lib copied for local unit tests
+libisar.dll
+isar.dll
+

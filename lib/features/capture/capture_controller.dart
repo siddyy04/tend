@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_first_app/ai/providers/ai_provider_selection.dart';
 import 'package:my_first_app/ai/providers/extraction_provider.dart';
 import 'package:my_first_app/ai/providers/litert/litert_extraction_provider.dart';
+import 'package:my_first_app/core/analytics/capture_analytics.dart';
+import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/domain/rules/extraction_validation_rules.dart';
 import 'package:my_first_app/features/circle/circle_providers.dart';
 
 /// Orchestrates text → extract → validated candidate handoff.
-///
-/// Sprint 2B.1: returns **all** grounded candidates. Multi-card confirmation
-/// UI is Phase 2B.2 — Capture currently navigates with the full list but the
-/// confirmation screen still drafts the first card until that phase.
 final captureControllerProvider = Provider<CaptureController>((ref) {
   return CaptureController(ref);
 });
@@ -22,10 +20,13 @@ sealed class CaptureSubmitResult {
 
 /// Validated candidates ready for the confirmation screen.
 class CaptureSubmitReady extends CaptureSubmitResult {
-  const CaptureSubmitReady(this.candidates)
-      : assert(candidates.length > 0);
+  const CaptureSubmitReady({
+    required this.candidates,
+    this.clarificationNeeded = const [],
+  }) : assert(candidates.length > 0);
 
   final List<ExtractedMemoryCandidate> candidates;
+  final List<ClarificationNeeded> clarificationNeeded;
 }
 
 /// No grounded memories — a valid outcome, not an error.
@@ -49,11 +50,20 @@ class CaptureController {
   final Ref _ref;
 
   /// Runs extraction and returns every validated candidate (Sprint 2B.1).
-  Future<CaptureSubmitResult> submitText(String text) async {
+  ///
+  /// [sourceType] is for analytics only — does not change extraction.
+  Future<CaptureSubmitResult> submitText(
+    String text, {
+    SourceType sourceType = SourceType.text,
+  }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       return const CaptureSubmitEmpty();
     }
+
+    final analytics = _ref.read(captureAnalyticsProvider);
+    analytics.extractionStarted(sourceType: sourceType);
+    final started = DateTime.now();
 
     try {
       final knownPeople = await _ref.read(allPeopleProvider.future);
@@ -105,6 +115,8 @@ class CaptureController {
         surviving.add(candidate);
       }
 
+      final duration = DateTime.now().difference(started);
+
       if (surviving.isEmpty) {
         String? detail;
         var pipelineFailed = false;
@@ -131,24 +143,33 @@ class CaptureController {
           debugPrint('[CaptureController] empty diagnostics: $detail');
         }
         if (pipelineFailed) {
-          // Detail stays in logs only — never primary failure UX copy.
+          analytics.extractionFailed(sourceType: sourceType);
           return const CaptureSubmitFailed();
         }
+        analytics.extractionEmpty(sourceType: sourceType);
         return const CaptureSubmitEmpty();
       }
 
-      if (kDebugMode && surviving.length > 1) {
-        debugPrint(
-          '[CaptureController] ${surviving.length} candidates survived; '
-          'Phase 2B.2 will show multi-card UI (currently passes full list).',
-        );
-      }
+      final clarifications = ambiguousPersonClarifications(
+        candidates: surviving,
+        knownNames: knownPeople.map((p) => p.name),
+      );
 
-      return CaptureSubmitReady(List.unmodifiable(surviving));
+      analytics.extractionCompleted(
+        sourceType: sourceType,
+        duration: duration,
+        memoryCount: surviving.length,
+      );
+
+      return CaptureSubmitReady(
+        candidates: List.unmodifiable(surviving),
+        clarificationNeeded: List.unmodifiable(clarifications),
+      );
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('[CaptureController] submitText failed: $e\n$st');
       }
+      analytics.extractionFailed(sourceType: sourceType);
       return const CaptureSubmitFailed();
     }
   }

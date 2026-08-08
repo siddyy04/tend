@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_first_app/app/app_routes.dart';
+import 'package:my_first_app/core/analytics/capture_analytics.dart';
 import 'package:my_first_app/data/local/isar/collections/person.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_args.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_controller.dart';
 import 'package:my_first_app/features/capture/confirmation/widgets/candidate_card.dart';
+import 'package:my_first_app/features/capture/confirmation/widgets/capture_found_memories_banner.dart';
+import 'package:my_first_app/features/capture/confirmation/widgets/clarification_note.dart';
 import 'package:my_first_app/features/capture/confirmation/widgets/original_note_section.dart';
 import 'package:my_first_app/features/circle/circle_providers.dart';
 
@@ -79,6 +82,7 @@ class _CaptureMultiConfirmationScreenState
   }
 
   Future<void> _onSave() async {
+    if (_saving) return;
     if (_selectedCount == 0) {
       setState(() {
         _batchError = 'Select at least one memory to save.';
@@ -94,6 +98,8 @@ class _CaptureMultiConfirmationScreenState
     try {
       final savedPersonUuids = <String>{};
       var anyValidationFailure = false;
+      var approved = 0;
+      var edited = 0;
 
       for (var i = 0; i < widget.args.candidates.length; i++) {
         if (!_selected[i]) continue;
@@ -103,30 +109,57 @@ class _CaptureMultiConfirmationScreenState
         final personUuid = await form.save();
         if (personUuid == null) {
           anyValidationFailure = true;
-          // Keep going so other cards can still save; surface first form error.
-          _batchError ??= form.saveError?.toString() ??
-              form.personError ??
-              form.eventTextError ??
-              form.categoryError ??
-              form.dateError ??
-              form.importanceScoreError ??
-              'Could not save memory ${i + 1}. Check the fields above.';
+          _batchError ??=
+              'Could not save memory ${i + 1}. Check the fields above and try again.';
         } else {
           savedPersonUuids.add(personUuid);
+          approved++;
+          if (form.wasEdited) edited++;
         }
       }
 
       if (!mounted) return;
 
+      final analytics = ref.read(captureAnalyticsProvider);
+      final rejected = widget.args.candidates.length - approved;
+      if (approved > 0) {
+        analytics.memoriesApproved(count: approved);
+      }
+      if (rejected > 0) {
+        analytics.memoriesRejected(count: rejected);
+      }
+      if (edited > 0) {
+        analytics.memoryEdited(fieldCount: edited);
+      }
+
       if (savedPersonUuids.isEmpty) {
         setState(() {
-          _batchError ??= 'Nothing was saved. Check each selected memory.';
+          _batchError ??=
+              'Nothing was saved. Check each selected memory and try again.';
         });
         return;
       }
 
       if (anyValidationFailure && savedPersonUuids.isNotEmpty) {
-        // Partial success — still navigate so saved rows are visible.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              approved == 1
+                  ? 'Saved 1 memory. Some others need another look.'
+                  : 'Saved $approved memories. Some others need another look.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              approved == 1
+                  ? 'Saved 1 memory.'
+                  : 'Saved $approved memories.',
+            ),
+          ),
+        );
       }
 
       if (savedPersonUuids.length == 1) {
@@ -162,7 +195,19 @@ class _CaptureMultiConfirmationScreenState
         title: const Text('Review before saving'),
       ),
       body: stillLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Preparing review…'),
+                  ],
+                ),
+              ),
+            )
           : SafeArea(
               child: Column(
                 children: [
@@ -170,6 +215,10 @@ class _CaptureMultiConfirmationScreenState
                     child: ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
+                        CaptureFoundMemoriesBanner(
+                          count: widget.args.candidates.length,
+                        ),
+                        const SizedBox(height: 14),
                         Text(
                           '$_selectedCount of ${widget.args.candidates.length} '
                           'selected to save',
@@ -181,7 +230,13 @@ class _CaptureMultiConfirmationScreenState
                           'then save the selected ones.',
                           style: theme.textTheme.bodyMedium,
                         ),
-                        const SizedBox(height: 12),
+                        if (widget.args.clarificationNeeded.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          ClarificationNote(
+                            items: widget.args.clarificationNeeded,
+                          ),
+                        ],
+                        const SizedBox(height: 14),
                         OriginalNoteSection(
                           originalText: widget.args.originalText,
                         ),
@@ -210,19 +265,23 @@ class _CaptureMultiConfirmationScreenState
                       top: false,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                        child: FilledButton(
-                          onPressed: _saving || _selectedCount == 0
-                              ? null
-                              : _onSave,
-                          child: _saving
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(_saveLabel),
+                        child: Semantics(
+                          button: true,
+                          label: _saveLabel,
+                          child: FilledButton(
+                            onPressed: _saving || _selectedCount == 0
+                                ? null
+                                : _onSave,
+                            child: _saving
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(_saveLabel),
+                          ),
                         ),
                       ),
                     ),
@@ -242,7 +301,15 @@ class _CaptureMultiConfirmationScreenState
     final asyncForm = ref.watch(captureConfirmationControllerProvider(key));
     return asyncForm.when(
       loading: () => const SizedBox.shrink(),
-      error: (e, _) => Text('$e'),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'Something went wrong loading this memory. Please go back and try again.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+        ),
+      ),
       data: (_) {
         final form =
             ref.read(captureConfirmationControllerProvider(key).notifier);
@@ -263,18 +330,23 @@ class _CaptureMultiConfirmationScreenState
                   children: [
                     Expanded(
                       child: Text(
-                        'Memory ${index + 1}',
+                        'Memory ${index + 1} of ${widget.args.candidates.length}',
                         style: theme.textTheme.titleSmall,
                       ),
                     ),
-                    Switch(
-                      value: _selected[index],
-                      onChanged: (value) {
-                        setState(() {
-                          _selected[index] = value;
-                          _batchError = null;
-                        });
-                      },
+                    Semantics(
+                      label: 'Include memory ${index + 1} when saving',
+                      child: Switch(
+                        value: _selected[index],
+                        onChanged: _saving
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _selected[index] = value;
+                                  _batchError = null;
+                                });
+                              },
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -298,10 +370,9 @@ class _CaptureMultiConfirmationScreenState
                     form.eventTextError != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    form.saveError?.toString() ??
-                        form.personError ??
+                    form.personError ??
                         form.eventTextError ??
-                        '',
+                        'Could not save this memory. Check the fields above.',
                     style: TextStyle(color: theme.colorScheme.error),
                   ),
                 ],

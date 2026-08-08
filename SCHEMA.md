@@ -108,6 +108,7 @@ class FollowUp {
   late DateTime updatedAt;
   @enumerated
   late SyncStatus syncStatus;
+  DateTime? deletedAt; // tombstone — null means not deleted
 }
 ```
 
@@ -267,7 +268,8 @@ create table follow_ups (
   category_snapshot memory_category not null,
   importance_score_snapshot smallint not null,
   created_at timestamptz not null,
-  updated_at timestamptz not null
+  updated_at timestamptz not null,
+  deleted_at timestamptz
 );
 create index idx_followups_status on follow_ups(status, expected_date);
 

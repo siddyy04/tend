@@ -11,11 +11,47 @@ abstract class ExtractionProvider {
   });
 }
 
-/// Sprint 2A result shape — candidates only (no clarification fields).
+/// Result of on-device extraction.
+///
+/// [clarificationNeeded] is app-owned (Sprint 2B.7) — passive notes only,
+/// never from conversational re-prompting.
 class ExtractionResult {
-  const ExtractionResult({required this.candidates});
+  const ExtractionResult({
+    required this.candidates,
+    this.clarificationNeeded = const [],
+  });
 
   final List<ExtractedMemoryCandidate> candidates;
+
+  /// Passive, non-blocking notes for the confirmation UI.
+  final List<ClarificationNeeded> clarificationNeeded;
+}
+
+/// Passive clarification request (Sprint 2B.7).
+///
+/// MVP: duplicate Circle names only ("Which John?"). Never used for missing
+/// dates, categories, importance, or low confidence.
+class ClarificationNeeded {
+  const ClarificationNeeded({
+    required this.reason,
+    required this.rawSnippet,
+  });
+
+  /// Human-readable question, e.g. `Which "John" did you mean?`
+  final String reason;
+
+  /// Source mention / snippet that triggered the note.
+  final String rawSnippet;
+
+  @override
+  bool operator ==(Object other) {
+    return other is ClarificationNeeded &&
+        other.reason == reason &&
+        other.rawSnippet == rawSnippet;
+  }
+
+  @override
+  int get hashCode => Object.hash(reason, rawSnippet);
 }
 
 /// One model-proposed memory before user confirmation.

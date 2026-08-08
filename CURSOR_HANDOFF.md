@@ -2,20 +2,21 @@
 
 **Purpose:** Onboard a new Cursor chat to continue Tend development without prior conversation history.  
 **Product:** Tend — offline-first personal relationship memory app (Flutter).  
-**Last updated:** Sprint 2B.1–2B.6 done (multi-memory, Create Person, Voice, OCR, Share). **Next: 2B.7.**
+**Last updated:** Sprint **2** complete (incl. 2B.8 RC + owner sign-off). **Next: Sprint 3 planning** — architecture / sprint review before any Sprint 3 implementation.
 
 ---
 
 ## 1. Current project status
 
-- **Sprint 0 / 1A / 1B / 2A:** Done and closed.
+- **Sprint 0 / 1A / 1B / 2A / 2B (through 2B.8):** Done and closed. Capture RC signed off — see [`RELEASE_READINESS_REPORT.md`](RELEASE_READINESS_REPORT.md) (**Go**; Conditional Pass conditions satisfied 2026-08-08).
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
-- **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text capture → on-device extraction → confirmation → Isar save**, model setup gate (auto-download primary).
-- **Next work:** **Sprint 2B** — **2B.1–2B.6 done**. Next: **2B.7** Clarification + confidence polish.
-- **Still later:** Sprint 3+ (opportunities, search, sync, settings polish).
+- **Foundation Cleanup (pre-Sprint 3):** Done — `FollowUp.deletedAt` schema contract; `PersonRepository.getByUuid` soft-delete filter; relative-date resolution + backfill. See `FOUNDATION_CLEANUP.md` / CHANGELOG.
+- **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text/voice/OCR/share capture → on-device extraction → confirmation → Isar save**, model setup gate (auto-download primary). Offline extract validated with model on disk.
+- **Next work:** **Sprint 3 planning only** — architecture and sprint-planning review (with Claude) before any new development. **Do not begin Sprint 3 implementation** until that review produces an approved plan.
+- **Still later (after Sprint 3 plan):** opportunities / suggestion engine, search, sync, settings polish.
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade). Smaller accepted decisions: see `ADR.md`.
 
-**Binding docs:** `ARCHITECTURE.md`, `ADR.md`, `FEATURES.md`, `SCHEMA.md`, `DEVELOPMENT_ROADMAP.md`, `SPRINT0.md`–`SPRINT2B.md`, `DEVLOG.md`, `BACKLOG.md`, this file.
+**Binding docs:** `ARCHITECTURE.md`, `ADR.md`, `FEATURES.md`, `SCHEMA.md`, `DEVELOPMENT_ROADMAP.md`, `SPRINT0.md`–`SPRINT2B.md`, `SPRINT2B8.md`, `RELEASE_READINESS_REPORT.md`, `DEVLOG.md`, `BACKLOG.md`, this file.
 
 ---
 
@@ -73,7 +74,9 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 | `extraction_validation_rules` / `extraction_defaults` | Done |
 | Capture + confirmation + save | Done (Typed / Voice / OCR / Share → same `CaptureSubmitFlow`) |
 | Model capability + download manager + setup UI | Done (staged: Downloading / Verifying / Installing / Preparing) |
-| ClarificationNeeded + confidence polish | **2B.7 next** |
+| ClarificationNeeded + confidence polish | **2B.7 done** |
+| Capture RC stabilization (E2E, perf, offline, cleanup, release notes) | **2B.8 done** — Go; owner sign-off 2026-08-08 (`RELEASE_READINESS_REPORT.md`) |
+| Sprint 3 (Today’s Opportunities / suggestion engine) | **Planning next** — no implementation until architecture review |
 | Embeddings persistence | Later |
 
 **Capture / Confirmation / repositories must not import `flutter_gemma`.** Only `litert_inference_adapter.dart` may (plus debug probe under `lib/debug/`).

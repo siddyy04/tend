@@ -31,7 +31,12 @@ class IsarPersonRepository implements PersonRepository {
 
   @override
   Future<Person?> getByUuid(String uuid) {
-    return _isar.persons.getByUuid(uuid);
+    return _isar.persons
+        .filter()
+        .uuidEqualTo(uuid)
+        .and()
+        .deletedAtIsNull()
+        .findFirst();
   }
 
   @override

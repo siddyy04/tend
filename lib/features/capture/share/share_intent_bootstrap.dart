@@ -51,7 +51,10 @@ class _ShareIntentBootstrapState extends ConsumerState<ShareIntentBootstrap> {
         await _accept(initial, resetNative: true);
       }
     } catch (e, st) {
-      debugPrint('[ShareIntentBootstrap] initial share failed: $e\n$st');
+      assert(() {
+        debugPrint('[ShareIntentBootstrap] initial share failed: $e\n$st');
+        return true;
+      }());
     }
 
     _sub = handler.watchShares().listen(
@@ -59,7 +62,10 @@ class _ShareIntentBootstrapState extends ConsumerState<ShareIntentBootstrap> {
         unawaited(_accept(payload, resetNative: true));
       },
       onError: (Object e, StackTrace st) {
-        debugPrint('[ShareIntentBootstrap] share stream error: $e\n$st');
+        assert(() {
+          debugPrint('[ShareIntentBootstrap] share stream error: $e\n$st');
+          return true;
+        }());
       },
     );
   }

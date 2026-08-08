@@ -28,4 +28,5 @@ class FollowUp {
   late DateTime updatedAt;
   @enumerated
   late SyncStatus syncStatus;
+  DateTime? deletedAt; // tombstone — null means not deleted
 }

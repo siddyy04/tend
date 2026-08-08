@@ -212,6 +212,7 @@ class _VoiceRecordingScreenState extends ConsumerState<VoiceRecordingScreen> {
         title: const Text('Voice capture'),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: 'Cancel voice capture',
           onPressed: _stopping ? null : _onCancel,
         ),
       ),
@@ -258,14 +259,22 @@ class _VoiceRecordingScreenState extends ConsumerState<VoiceRecordingScreen> {
                     style: theme.textTheme.bodyMedium,
                   ),
                   const Spacer(),
-                  FilledButton(
-                    onPressed: _stopping ? null : _onStop,
-                    child: const Text('Stop'),
+                  Semantics(
+                    button: true,
+                    label: 'Stop recording',
+                    child: FilledButton(
+                      onPressed: _stopping ? null : _onStop,
+                      child: const Text('Stop'),
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: _stopping ? null : _onCancel,
-                    child: const Text('Cancel'),
+                  Semantics(
+                    button: true,
+                    label: 'Cancel voice capture',
+                    child: OutlinedButton(
+                      onPressed: _stopping ? null : _onCancel,
+                      child: const Text('Cancel'),
+                    ),
                   ),
                 ],
               ),
