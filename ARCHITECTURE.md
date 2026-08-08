@@ -290,7 +290,7 @@ abstract class OCRProvider {
 Concrete implementations live behind these interfaces:
 - `LiteRtExtractionProvider` — on-device LiteRT-LM via `flutter_gemma`, using **function-calling mode** to enforce the Deliverable 5 JSON schema. Which weights run is decided by `ModelCatalog` (MVP: Gemma 4 E2B), not by Capture/Confirmation.
 - `PlatformTranscriptionProvider` — **Sprint 2B.4 MVP** wraps iOS Speech / Android `SpeechRecognizer` via `speech_to_text`, **not the LLM**. Selected through `activeTranscriptionProvider`. Acceptable for short notes; **not** the long-term conversational / multi-minute transcription solution (see product backlog evaluation). Future long-form engines (Whisper, cloud STT, etc.) must implement the same `TranscriptionProvider` interface so Capture → Extraction → Confirmation stay unchanged.
-- `PlatformOCRProvider` — wraps ML Kit / Vision on-device text recognition, **not the LLM**. Same rationale.
+- `PlatformOCRProvider` — **Sprint 2B.5 MVP** wraps Google ML Kit text recognition via `google_mlkit_text_recognition`, **not the LLM**. Selected through `activeOCRProvider`. Screenshots / text-bearing photos only; scene captioning remains P1. Future OCR engines implement the same `OCRProvider` interface so Capture → Extraction → Confirmation stay unchanged.
 - `ManualFallbackProvider` — a null-object implementation for devices that can't run a local model (Section 7): `extract()` returns "needs manual entry" instead of throwing, `embed()` returns null and search silently degrades to keyword-only. The app must never crash or block capture because the model isn't available — it should just quietly become the pre-AI version of itself.
 
 ### Why ASR and OCR stay outside the LLM (and why the ASR *implementation* is swappable)

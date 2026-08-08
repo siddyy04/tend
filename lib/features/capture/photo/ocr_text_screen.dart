@@ -3,24 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/features/capture/capture_submit_flow.dart';
+import 'package:my_first_app/features/capture/photo/ocr_text_args.dart';
 import 'package:my_first_app/features/capture/widgets/capture_empty_memories_panel.dart';
 
-/// Editable transcript after platform speech-to-text (Sprint 2B.4).
-class VoiceTranscriptScreen extends ConsumerStatefulWidget {
-  const VoiceTranscriptScreen({
+/// Editable OCR text — Continue runs the same Capture submit pipeline as typed/voice.
+class OcrTextScreen extends ConsumerStatefulWidget {
+  const OcrTextScreen({
     super.key,
-    required this.initialTranscript,
+    required this.args,
   });
 
-  final String initialTranscript;
+  final OcrTextArgs args;
 
   @override
-  ConsumerState<VoiceTranscriptScreen> createState() =>
-      _VoiceTranscriptScreenState();
+  ConsumerState<OcrTextScreen> createState() => _OcrTextScreenState();
 }
 
-class _VoiceTranscriptScreenState
-    extends ConsumerState<VoiceTranscriptScreen> {
+class _OcrTextScreenState extends ConsumerState<OcrTextScreen> {
   late final TextEditingController _controller;
   var _submitting = false;
   var _showEmptyPanel = false;
@@ -29,7 +28,7 @@ class _VoiceTranscriptScreenState
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialTranscript);
+    _controller = TextEditingController(text: widget.args.text);
   }
 
   @override
@@ -58,8 +57,8 @@ class _VoiceTranscriptScreenState
         context: context,
         ref: ref,
         text: text,
-        sourceType: SourceType.voice,
-        sourceRef: null,
+        sourceType: SourceType.photo,
+        sourceRef: widget.args.imagePath,
         onNavigateToConfirmation: (route, args) {
           context.pushReplacement(route, extra: args);
         },
@@ -83,7 +82,7 @@ class _VoiceTranscriptScreenState
             'Something went wrong while extracting memories. Please try again, or enter the memory manually.';
       });
       assert(() {
-        debugPrint('[VoiceTranscript] submit failed: $error\n$st');
+        debugPrint('[OcrTextScreen] submit failed: $error\n$st');
         return true;
       }());
     } finally {
@@ -122,7 +121,7 @@ class _VoiceTranscriptScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit transcript'),
+        title: const Text('Edit extracted text'),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: _submitting ? null : _onCancel,
@@ -135,7 +134,7 @@ class _VoiceTranscriptScreenState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Review and edit the transcript, then continue to extract memories.',
+                'Review and edit the text from the image, then continue to extract memories.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -149,7 +148,7 @@ class _VoiceTranscriptScreenState
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     alignLabelWithHint: true,
-                    labelText: 'Transcript',
+                    labelText: 'Extracted text',
                   ),
                   onChanged: (_) => setState(_clearOutcome),
                 ),

@@ -6,6 +6,38 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.8 — Capture empty-state UX
+
+## Changed
+
+### Capture (Typed / Voice / OCR)
+- Empty extraction is a valid outcome, not an error: “No memories were found in this text.” with short explanation, examples, Try another note, and Enter manually
+- Technical details (e.g. mapping/grounding diagnostics) stay debug-only
+- `CaptureSubmitFailed` reserved for genuine pipeline failures (install / inference / unexpected exceptions)
+
+### Extraction prompt
+- If there is no explicit person and stable memory, emit zero function calls
+- Never emit placeholders such as N/A, None, Unknown, or "-"
+
+---
+
+# v0.3.7 — Photo / OCR capture (Sprint 2B.5)
+
+## Added
+
+### Capture
+- Camera and gallery entry for photo capture
+- Image preview before OCR (Continue / choose another / Cancel)
+- On-device OCR via ML Kit → editable extracted text → existing extraction / confirmation flow
+- Saved memories from this path use `sourceType = photo` and a local image `sourceRef`
+
+## Notes
+
+- OCR stays behind `OCRProvider` / `activeOCRProvider` — images never go to Gemma / LiteRT
+- Typed and voice capture unchanged
+
+---
+
 # v0.3.6 — Voice capture (Sprint 2B.4)
 
 ## Added

@@ -70,5 +70,9 @@
 	<string>Tend needs the microphone to capture voice notes about people in your circle.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Tend converts your voice note to text on this device so you can review it before saving a memory.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Tend needs the camera to capture photos of invitations, notices, and other text so memories can be saved.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tend needs photo library access so you can choose an image with text to turn into a memory.</string>
 </dict>
 </plist>

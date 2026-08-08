@@ -9,8 +9,9 @@ import 'package:my_first_app/app/app_routes.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/features/capture/capture_submit_flow.dart';
 import 'package:my_first_app/features/capture/confirmation/capture_confirmation_args.dart';
+import 'package:my_first_app/features/capture/widgets/capture_empty_memories_panel.dart';
 
-/// Global capture screen (Sprint 2A text + Sprint 2B.4 voice ingress).
+/// Global capture screen (text + voice + photo ingress).
 class CaptureScreen extends ConsumerStatefulWidget {
   const CaptureScreen({super.key});
 
@@ -21,8 +22,8 @@ class CaptureScreen extends ConsumerStatefulWidget {
 class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   final _textController = TextEditingController();
   var _submitting = false;
-  String? _statusMessage;
-  Object? _error;
+  var _showEmptyPanel = false;
+  String? _failureMessage;
   var _sourceType = SourceType.text;
   String? _sourceRef;
 
@@ -32,20 +33,26 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     super.dispose();
   }
 
+  void _clearOutcome() {
+    _showEmptyPanel = false;
+    _failureMessage = null;
+  }
+
   Future<void> _onMic() async {
     FocusScope.of(context).unfocus();
-    // Voice recording → transcript owns submitText; do not expect a result here.
-    // (Recording uses pushReplacement to transcript, which would complete this
-    // push with null before the user finishes editing.)
     await context.push<void>(AppRoutes.captureVoice);
+  }
+
+  Future<void> _onPhoto() async {
+    FocusScope.of(context).unfocus();
+    await context.push<void>(AppRoutes.capturePhoto);
   }
 
   Future<void> _onContinue() async {
     FocusScope.of(context).unfocus();
     setState(() {
       _submitting = true;
-      _statusMessage = null;
-      _error = null;
+      _clearOutcome();
     });
 
     try {
@@ -66,19 +73,21 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         case CaptureSubmitFlowNavigated():
         case CaptureSubmitFlowCancelled():
           break;
-        case CaptureSubmitFlowMessage(:final statusMessage):
-          setState(() {
-            _statusMessage = statusMessage;
-            _error = outcome.debugForUi;
-          });
+        case CaptureSubmitFlowEmpty():
+          setState(() => _showEmptyPanel = true);
+        case CaptureSubmitFlowFailure(:final userMessage):
+          setState(() => _failureMessage = userMessage);
       }
     } catch (error, st) {
       if (!mounted) return;
       setState(() {
-        _statusMessage =
-            'Extraction failed. Please try again, or enter the memory manually.';
-        _error = '$error\n$st';
+        _failureMessage =
+            'Something went wrong while extracting memories. Please try again, or enter the memory manually.';
       });
+      assert(() {
+        debugPrint('[CaptureScreen] submit failed: $error\n$st');
+        return true;
+      }());
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -117,6 +126,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         title: const Text('Capture'),
         actions: [
           IconButton(
+            tooltip: 'Photo capture',
+            onPressed: _submitting ? null : _onPhoto,
+            icon: const Icon(Icons.photo_camera_outlined),
+          ),
+          IconButton(
             tooltip: 'Voice capture',
             onPressed: _submitting ? null : _onMic,
             icon: const Icon(Icons.mic_none),
@@ -131,8 +145,8 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             children: [
               Text(
                 assisted
-                    ? 'Type a note about someone in your circle, or use the microphone. You can review the memory before saving.'
-                    : 'Type a note about someone in your circle, or use the microphone. You’ll pick who it’s about and finish the details yourself.',
+                    ? 'Type a note about someone in your circle, or use the microphone or camera. You can review the memory before saving.'
+                    : 'Type a note about someone in your circle, or use the microphone or camera. You’ll pick who it’s about and finish the details yourself.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -153,40 +167,44 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                     setState(() {
                       _sourceType = SourceType.text;
                       _sourceRef = null;
+                      _clearOutcome();
                     });
                   },
                 ),
               ),
-              if (_statusMessage != null) ...[
+              if (_showEmptyPanel) ...[
+                const SizedBox(height: 12),
+                CaptureEmptyMemoriesPanel(
+                  enabled: !_submitting,
+                  onEditText: () {
+                    setState(_clearOutcome);
+                  },
+                  onEnterManually: _onEnterManually,
+                ),
+              ],
+              if (_failureMessage != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  _statusMessage!,
+                  _failureMessage!,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  '$_error',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: canSubmit ? _onContinue : null,
-                child: _submitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Continue'),
-              ),
-              if (_statusMessage != null) ...[
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: _submitting ? null : _onEnterManually,
                   child: const Text('Enter manually'),
+                ),
+              ],
+              if (!_showEmptyPanel) ...[
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: canSubmit ? _onContinue : null,
+                  child: _submitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Continue'),
                 ),
               ],
             ],

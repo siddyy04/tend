@@ -20,8 +20,14 @@ class LiteRtExtractionProvider implements ExtractionProvider {
   final LiteRtInferenceAdapter adapter;
   final LiteRtPromptBuilder promptBuilder;
 
-  /// Soft-failure detail for Capture empty/debug UI.
+  /// Soft-failure / empty debug detail for Capture (debug builds only).
+  ///
+  /// Prefer [lastPipelineFailureReason] to decide Failed vs Empty UX.
   String? lastFailureReason;
+
+  /// Set only for genuine pipeline failures (install/inference/exception).
+  /// Mapping zero candidates or intentional zero tool calls are not failures.
+  String? lastPipelineFailureReason;
 
   @override
   Future<ExtractionResult> extract({
@@ -29,6 +35,7 @@ class LiteRtExtractionProvider implements ExtractionProvider {
     required List<Person> knownPeople,
   }) async {
     lastFailureReason = null;
+    lastPipelineFailureReason = null;
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       return const ExtractionResult(candidates: []);
@@ -55,9 +62,19 @@ class LiteRtExtractionProvider implements ExtractionProvider {
         tools: bundle.tools,
       );
 
+      final branch = adapter.lastDiagnostics?.parserBranch;
+      if (branch == 'exception' || branch == 'no_tools_provided') {
+        lastPipelineFailureReason =
+            adapter.lastDiagnostics?.toString() ?? branch;
+        lastFailureReason = lastPipelineFailureReason;
+        return const ExtractionResult(candidates: []);
+      }
+
       if (rawCalls.isEmpty) {
+        // Valid empty: model emitted no tool calls (or non-FC response with
+        // nothing to map). Not a pipeline failure.
         lastFailureReason =
-            adapter.lastDiagnostics?.toString() ?? 'no model response';
+            adapter.lastDiagnostics?.toString() ?? 'no function calls';
         if (kDebugMode) {
           debugPrint(
             '[LiteRtExtractionProvider] no function-call response; '
@@ -131,10 +148,15 @@ class LiteRtExtractionProvider implements ExtractionProvider {
       }
 
       if (candidates.isEmpty) {
+        // Model called the tool but nothing mapped — valid empty for UX;
+        // keep detail for debug logs only (not CaptureSubmitFailed).
         lastFailureReason =
             'mapping produced 0 candidates from ${rawCalls.length} call(s); '
             'raw=${adapter.lastFullRawResponse}; '
             '${adapter.lastDiagnostics}';
+        if (kDebugMode) {
+          debugPrint('[LiteRtExtractionProvider] $lastFailureReason');
+        }
       }
 
       return ExtractionResult(candidates: candidates);
@@ -143,7 +165,8 @@ class LiteRtExtractionProvider implements ExtractionProvider {
             (l) => l.contains('litert_') || l.trim().startsWith('#0'),
             orElse: () => st.toString().split('\n').first,
           );
-      lastFailureReason = 'extract threw at $line: $e';
+      lastPipelineFailureReason = 'extract threw at $line: $e';
+      lastFailureReason = lastPipelineFailureReason;
       if (kDebugMode) {
         debugPrint('[LiteRtExtractionProvider] $lastFailureReason\n$st');
       }

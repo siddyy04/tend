@@ -151,4 +151,20 @@
 - Speech language: auto-detect device/system locale when possible; otherwise prompt once; persist in Settings (`SpeechLocalePreferences`) for all future STT providers
 - Backlog: live transcription, waveform, VAD, voice analytics, audio retention; Capture UX Polish for first-class Voice/OCR/Share actions (after 2B.5–2B.6)
 
+### Phase 2B.5 — OCR / Photo capture
+
+- Capture camera icon → Take photo / Choose from gallery → preview (no OCR yet) → Continue → ML Kit on-device OCR (`PlatformOCRProvider`) → editable text → `CaptureSubmitFlow` / confirmation
+- Permissions: camera + photos; permanently denied → settings messaging; no repeated prompts
+- Empty OCR: friendly message, no Gemma call; try another image or back to Capture
+- Image copied to `documents/captures/` as `sourceRef`; `sourceType = photo`
+- Architecture: UI depends on `activeOCRProvider` only; engine replaceable later
+- Backlog: handwriting, document detection/crop/perspective, multi-page, batch, confidence overlay, enhancement, OCR language, AI vision, image retention
+
+### Capture empty-state UX (post–2B.5)
+
+- Distinguished Success / Empty / Failure across Typed, Voice, OCR via `CaptureSubmitFlow`
+- Empty: friendly panel + examples; mapping/grounding strings debug-only
+- Failure only for genuine pipeline issues (`lastPipelineFailureReason` / exceptions)
+- Prompt: no placeholders (N/A/None/Unknown/-); zero calls when no person + stable memory
+
 

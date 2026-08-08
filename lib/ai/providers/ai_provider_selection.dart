@@ -6,6 +6,8 @@ import 'package:my_first_app/ai/providers/litert/litert_extraction_provider.dart
 import 'package:my_first_app/ai/providers/litert/litert_inference_adapter.dart';
 import 'package:my_first_app/ai/providers/litert/litert_prompt_builder.dart';
 import 'package:my_first_app/ai/providers/manual/manual_fallback_provider.dart';
+import 'package:my_first_app/ai/providers/ocr_provider.dart';
+import 'package:my_first_app/ai/providers/platform/platform_ocr_provider.dart';
 import 'package:my_first_app/ai/providers/platform/platform_transcription_provider.dart';
 import 'package:my_first_app/ai/providers/transcription_provider.dart';
 
@@ -61,4 +63,18 @@ final platformTranscriptionProvider =
 /// engine is selected after evaluation (see BACKLOG).
 final activeTranscriptionProvider = Provider<TranscriptionProvider>((ref) {
   return ref.watch(platformTranscriptionProvider);
+});
+
+/// Platform OCR — never routes through LiteRT / Gemma.
+final platformOCRProvider = Provider<PlatformOCRProvider>((ref) {
+  final provider = PlatformOCRProvider();
+  ref.onDispose(() {
+    provider.close();
+  });
+  return provider;
+});
+
+/// Active [OCRProvider] — Capture / Photo UI should watch this only.
+final activeOCRProvider = Provider<OCRProvider>((ref) {
+  return ref.watch(platformOCRProvider);
 });

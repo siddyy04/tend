@@ -28,24 +28,19 @@ class CaptureSubmitReady extends CaptureSubmitResult {
   final List<ExtractedMemoryCandidate> candidates;
 }
 
-/// No candidate survived grounding/taxonomy checks.
+/// No grounded memories — a valid outcome, not an error.
 class CaptureSubmitEmpty extends CaptureSubmitResult {
-  const CaptureSubmitEmpty({this.debugDetail});
-
-  /// Populated in debug builds to explain install/inference failures.
-  final String? debugDetail;
+  const CaptureSubmitEmpty();
 }
 
-/// Extraction ran but failed (parse/map/inference error) — show failure UX.
+/// Genuine pipeline failure (install / inference / unexpected exception).
 class CaptureSubmitFailed extends CaptureSubmitResult {
   const CaptureSubmitFailed({
     this.userMessage =
-        'Extraction failed. Please try again, or enter the memory manually.',
-    this.debugDetail,
+        'Something went wrong while extracting memories. Please try again, or enter the memory manually.',
   });
 
   final String userMessage;
-  final String? debugDetail;
 }
 
 class CaptureController {
@@ -57,7 +52,7 @@ class CaptureController {
   Future<CaptureSubmitResult> submitText(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
-      return const CaptureSubmitEmpty(debugDetail: 'empty input');
+      return const CaptureSubmitEmpty();
     }
 
     try {
@@ -112,28 +107,34 @@ class CaptureController {
 
       if (surviving.isEmpty) {
         String? detail;
-        var softFailed = false;
+        var pipelineFailed = false;
         if (provider is LiteRtExtractionProvider) {
-          softFailed = provider.lastFailureReason != null ||
+          pipelineFailed = provider.lastPipelineFailureReason != null ||
               provider.adapter.lastDiagnostics?.parserBranch == 'exception';
           if (kDebugMode) {
             final raw = provider.adapter.lastFullRawResponse;
             detail = [
-              provider.lastFailureReason ??
+              provider.lastPipelineFailureReason ??
+                  provider.lastFailureReason ??
                   provider.adapter.lastDiagnostics?.toString(),
               if (raw != null) 'FULL_RAW_RESPONSE=$raw',
               if (provider.adapter.lastParserResultSummary != null)
                 'PARSER=${provider.adapter.lastParserResultSummary}',
             ].whereType<String>().join('\n');
+            debugPrint(
+              '[CaptureController] empty/failure diagnostics:\n$detail',
+            );
           }
         }
         if (kDebugMode && detail == null) {
           detail = 'rawCandidates=${extraction.candidates.length}';
+          debugPrint('[CaptureController] empty diagnostics: $detail');
         }
-        if (softFailed) {
-          return CaptureSubmitFailed(debugDetail: detail);
+        if (pipelineFailed) {
+          // Detail stays in logs only — never primary failure UX copy.
+          return const CaptureSubmitFailed();
         }
-        return CaptureSubmitEmpty(debugDetail: detail);
+        return const CaptureSubmitEmpty();
       }
 
       if (kDebugMode && surviving.length > 1) {
@@ -148,9 +149,7 @@ class CaptureController {
       if (kDebugMode) {
         debugPrint('[CaptureController] submitText failed: $e\n$st');
       }
-      return CaptureSubmitFailed(
-        debugDetail: kDebugMode ? '$e\n$st' : null,
-      );
+      return const CaptureSubmitFailed();
     }
   }
 }

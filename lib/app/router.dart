@@ -12,6 +12,9 @@ import '../features/capture/confirmation/capture_confirmation_screen.dart';
 import '../features/capture/confirmation/capture_multi_confirmation_screen.dart';
 import '../features/capture/confirmation/capture_multi_summary_screen.dart';
 import '../features/capture/model_setup_screen.dart';
+import '../features/capture/photo/ocr_text_args.dart';
+import '../features/capture/photo/ocr_text_screen.dart';
+import '../features/capture/photo/photo_capture_screen.dart';
 import '../features/capture/voice/voice_recording_screen.dart';
 import '../features/capture/voice/voice_transcript_screen.dart';
 import '../features/circle/circle_screen.dart';
@@ -191,6 +194,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           }
           return VoiceTranscriptScreen(initialTranscript: transcript);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.capturePhoto,
+        builder: (context, state) => const PhotoCaptureScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.capturePhotoText,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! OcrTextArgs) {
+            return const Scaffold(
+              body: Center(child: Text('Missing OCR text')),
+            );
+          }
+          return OcrTextScreen(args: args);
         },
       ),
       GoRoute(

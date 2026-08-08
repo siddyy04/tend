@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +12,7 @@ import 'package:my_first_app/features/circle/circle_providers.dart';
 
 /// Shared Capture → extract → confirm (or manual fallback) entry point.
 ///
-/// Used by typed Capture and voice transcript so both share one pipeline.
+/// Used by Typed, Voice, OCR, and Share so empty/failure UX stays consistent.
 class CaptureSubmitFlow {
   const CaptureSubmitFlow._();
 
@@ -26,11 +25,6 @@ class CaptureSubmitFlow {
   }
 
   /// Runs [CaptureController.submitText] and navigates to confirmation.
-  ///
-  /// Returns a user-facing status message when extraction yields empty/failed
-  /// (caller shows it). Returns `null` when navigation happened or the user
-  /// cancelled manual fallback. Throws only for unexpected errors — callers
-  /// may also catch and map to a generic failure message.
   static Future<CaptureSubmitFlowOutcome> submitText({
     required BuildContext context,
     required WidgetRef ref,
@@ -76,16 +70,10 @@ class CaptureSubmitFlow {
             : AppRoutes.captureConfirmSummary;
         onNavigateToConfirmation(route, args);
         return const CaptureSubmitFlowOutcome.navigated();
-      case CaptureSubmitEmpty(:final debugDetail):
-        return CaptureSubmitFlowOutcome.message(
-          'Nothing could be captured from that note. Try again, or enter a memory manually.',
-          debugDetail: debugDetail,
-        );
-      case CaptureSubmitFailed(:final userMessage, :final debugDetail):
-        return CaptureSubmitFlowOutcome.message(
-          userMessage,
-          debugDetail: debugDetail,
-        );
+      case CaptureSubmitEmpty():
+        return const CaptureSubmitFlowOutcome.empty();
+      case CaptureSubmitFailed(:final userMessage):
+        return CaptureSubmitFlowOutcome.failure(userMessage);
     }
   }
 
@@ -142,10 +130,12 @@ sealed class CaptureSubmitFlowOutcome {
   const factory CaptureSubmitFlowOutcome.cancelled() =
       CaptureSubmitFlowCancelled;
 
-  const factory CaptureSubmitFlowOutcome.message(
-    String statusMessage, {
-    String? debugDetail,
-  }) = CaptureSubmitFlowMessage;
+  /// Valid empty: AI finished; no grounded memories.
+  const factory CaptureSubmitFlowOutcome.empty() = CaptureSubmitFlowEmpty;
+
+  /// Genuine pipeline failure only.
+  const factory CaptureSubmitFlowOutcome.failure(String userMessage) =
+      CaptureSubmitFlowFailure;
 }
 
 class CaptureSubmitFlowNavigated extends CaptureSubmitFlowOutcome {
@@ -156,11 +146,12 @@ class CaptureSubmitFlowCancelled extends CaptureSubmitFlowOutcome {
   const CaptureSubmitFlowCancelled();
 }
 
-class CaptureSubmitFlowMessage extends CaptureSubmitFlowOutcome {
-  const CaptureSubmitFlowMessage(this.statusMessage, {this.debugDetail});
+class CaptureSubmitFlowEmpty extends CaptureSubmitFlowOutcome {
+  const CaptureSubmitFlowEmpty();
+}
 
-  final String statusMessage;
-  final String? debugDetail;
+class CaptureSubmitFlowFailure extends CaptureSubmitFlowOutcome {
+  const CaptureSubmitFlowFailure(this.userMessage);
 
-  String? get debugForUi => kDebugMode ? debugDetail : null;
+  final String userMessage;
 }

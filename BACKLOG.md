@@ -159,18 +159,8 @@ Literal extraction sometimes returns verb fragments for `eventText` (e.g. “wor
 **Problem**
 When a note lacks enough information (e.g. bare name “Emily”), grounding correctly yields zero memories, but Capture shows a generic “Nothing could be captured from that note” message. That undersells the real reason and does not guide the user.
 
-**Sprint / area**
-Capture UX (future sprint — not blocking Sprint 2B)
-
-**Proposed solution**
-- Prefer copy such as:  
-  “This note doesn't contain enough information to create a memory yet. Try adding what happened or something important about the person.”
-- Keep a path to manual entry.
-- Distinguish soft model/protocol failures from insufficient-information empties only if diagnostics already allow it without new architecture.
-
-**Related**
-- `EXTRACTION_COMPLETENESS_BENCHMARK.md` — Insufficient information (I1–I6)
-- Prompt already instructs zero FunctionCalls when no explicit fact exists
+**Status**
+**Shipped** — shared empty-state panel across Typed / Voice / OCR (`CaptureEmptyMemoriesPanel` via `CaptureSubmitFlowEmpty`). Genuine pipeline failures stay on `CaptureSubmitFailed`. Technical mapping/grounding strings are debug-only.
 
 ---
 
@@ -243,6 +233,108 @@ Sprint 2B.4 sets `sourceType = voice` but does not yet store a local audio file 
 - Record audio to app documents (captures subfolder) when mic exclusivity allows, or adopt a file-capable STT path.
 - Set `sourceRef` to that path on save.
 - Define retention (e.g. delete with soft-deleted memory, max age, user purge) and implement cleanup.
+
+---
+
+### OCR — handwriting recognition
+**Problem**
+MVP OCR targets printed / screenshot text; handwritten notes may fail or read poorly.
+
+**Proposed solution**
+- Evaluate handwriting-capable OCR engines or script packs; keep behind `OCRProvider`.
+
+---
+
+### OCR — automatic document detection
+**Problem**
+Users must frame documents manually; cluttered photos reduce OCR quality.
+
+**Proposed solution**
+- Detect document / page bounds before OCR (still no AI vision captioning).
+
+---
+
+### OCR — automatic cropping
+**Problem**
+Full-frame photos include unrelated background that can confuse OCR.
+
+**Proposed solution**
+- Crop to detected document region (or user-adjustable crop) before OCR.
+
+---
+
+### OCR — perspective correction
+**Problem**
+Angled photos of invitations / notices warp text and hurt recognition.
+
+**Proposed solution**
+- Apply perspective transform after document detection.
+
+---
+
+### OCR — multi-page document OCR
+**Problem**
+Multi-page notices require repeated captures; no assembly into one editable text.
+
+**Proposed solution**
+- Capture multiple pages, OCR each, concatenate (with page markers) into one editable draft.
+
+---
+
+### OCR — batch image processing
+**Problem**
+Users may want several photos in one capture session.
+
+**Proposed solution**
+- Select multiple gallery images; OCR sequentially; merge or present as separate drafts.
+
+---
+
+### OCR — confidence overlay
+**Problem**
+Users cannot see which regions OCR was unsure about before editing.
+
+**Proposed solution**
+- Optional overlay / highlights for low-confidence blocks (engine permitting).
+
+---
+
+### OCR — image enhancement before OCR
+**Problem**
+Low light, glare, or low contrast reduces OCR accuracy.
+
+**Proposed solution**
+- Lightweight preprocess (contrast / denoise / binarize) before `extractText` — still not generative AI enhancement.
+
+---
+
+### OCR — language / script selection
+**Problem**
+MVP uses Latin ML Kit script; other scripts need explicit packs / selection.
+
+**Proposed solution**
+- Settings preference for OCR script/language (similar to speech language), wired through `OCRProvider`.
+
+---
+
+### OCR — AI vision models for image understanding
+**Problem**
+Scene photos (not text-bearing) cannot become memories via OCR alone.
+
+**Sprint / area**
+P1 / FEATURES vision captioning — **not** Sprint 2B. Requires explicit product + ADR if the LLM ever receives images.
+
+**Proposed solution**
+- Separate from OCR path; do not overload `OCRProvider` with captioning.
+
+---
+
+### OCR — original image retention/deletion policy
+**Problem**
+Sprint 2B.5 stores images under `documents/captures/` as `sourceRef`; retention and purge rules are undefined.
+
+**Proposed solution**
+- Define retention (delete with soft-deleted memory, max age, user purge) and implement cleanup. Align with voice audio retention policy where possible.
 
 ---
 
