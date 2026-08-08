@@ -688,6 +688,14 @@ Deferred from Sprint 1B:
 - Advanced Unicode / diacritic folding beyond casefold + trim
 - Isar `contains` prefilter if keyword scan latency exceeds ~300ms at larger corpora
 
+### Phase 3.3 semantic Search (gated — Conditional Go)
+**Priority:** High — **blocked on product confirmation** of ADR-013 / `SPRINT3_2_FINDINGS.md`
+
+- Spike outcome: **Conditional Go** with dedicated **Gecko-110m-en** (not Gemma 4 E2B); keyword Search stays primary
+- Conditions before implement: `embeddingModelVersion` schema; public model download UX; additive hybrid ranking + no-match threshold; opportunistic backfill; no production `embeddingBackends` until wired
+- Acceptable alternative: stay keyword-only (Option 3) — no production rollback
+- Do **not** start Suggestion Engine here (Sprint 4)
+
 ### Activity log
 Maintain a timeline of actions such as:
 - Memory added

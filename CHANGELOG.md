@@ -6,6 +6,16 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.4.2 — Phase 3.2 embedding spike (decision only)
+
+## Notes
+
+- Research spike complete: Gemma 4 E2B cannot embed via current bridge; **Conditional Go** for Phase 3.3 using public **Gecko-110m-en** (768-d) — see `SPRINT3_2_FINDINGS.md` / ADR-013
+- No user-facing Search behavior change; Phase 3.1 keyword Search unchanged
+- `flutter_gemma_embeddings` added for spike harness only (production does not register embedding backends yet)
+
+---
+
 # v0.4.1 — Capture Quality: pronoun binding
 
 ## Fixed

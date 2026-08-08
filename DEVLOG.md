@@ -223,3 +223,13 @@
 - Post-prompt re-trace: still often **ONE_FUNCTION_CALL** (model merge); binder cannot invent the missing meeting FC — remaining gap is model completeness
 - Tests: `test/domain/rules/pronoun_person_binding_test.dart`; benchmark C6–C9
 
+## Sprint 3 Phase 3.2 — Embedding provider spike (complete)
+
+- Timebox: two working days (binding); harness `lib/debug/embedding_spike_main.dart` + `embedding_spike_cases.dart`
+- Exp 1: Gemma 4 E2B **NOT_CAPABLE** of embeddings via current LiteRT-LM `InferenceModel` API
+- Option 2: **Gecko-110m-en** public (~114 MB); on AIN065 cold≈187 ms, warm≈172 ms, dim=768; exact 2/2, paraphrase 3/3 on micro-set
+- EmbeddingGemma gated (HF 401) — disqualified for MVP download (ADR-010 class)
+- Recommendation: **Conditional Go** Phase 3.3 with Gecko + versioning + keyword-primary hybrid; see `SPRINT3_2_FINDINGS.md` / ADR-013
+- Cut: battery Exp 6, RSS delta, real search-log queries, live corpus cardinality
+- Production Search / Capture untouched; `flutter_gemma_embeddings` in pubspec but backends registered only in spike harness
+

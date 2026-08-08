@@ -346,3 +346,38 @@ Sprint 2B needs multiple memories from one note. Two native FC shapes were spike
 - Capture/Confirmation consume `List<ExtractedMemoryCandidate>` produced by mapping each call independently.
 - Spike harnesses under `lib/debug/` may compare protocols for research, but production stays parallel-flat.
 - Prompt-only changes are allowed without an ADR; protocol/shape changes require a new ADR.
+
+---
+
+### ADR-013 — On-device embeddings: Conditional Go with Gecko (not Gemma 4 E2B)
+
+**Status**
+Accepted (draft from Phase 3.2 spike — product may confirm or descope Phase 3.3)
+
+**Date**
+2026-08-08
+
+**Context**
+Phase 3.1 shipped keyword Search. Phase 3.2 asked whether Tend should generate on-device embeddings for semantic search (`SPRINT3_2.md`, two-day timebox). Spike evidence is in `SPRINT3_2_FINDINGS.md`.
+
+**Decision**
+- **Do not** use Gemma 4 E2B / LiteRT-LM inference for embeddings — the current bridge exposes no embedding API on `InferenceModel`.
+- **Conditional Go** for Phase 3.3 semantic search using a **dedicated** embedder: **Gecko-110m-en** (`Gecko_256_quant.tflite`, 768-d) via `flutter_gemma_embeddings`, publicly downloadable without hub login.
+- **Do not** adopt EmbeddingGemma-300m for MVP download while HF gating (401 without token) remains — same distribution class as ADR-010’s gated Preview rejection.
+- Semantic ranking must be an **additive** `SearchProvider` signal on top of Phase 3.1 keyword search — never a replacement.
+- Before production writes: add Memory fields **`embeddingModelVersion`** (string) and keep `embedding` as `List<double>?`; never compare vectors across different versions/dimensions.
+- Production must not register `embeddingBackends` until Phase 3.3 implements `EmbeddingProvider`.
+- If product declines Phase 3.3: **Option 3 — stay keyword-only** is an accepted outcome; no production rollback required.
+
+**Rationale**
+- RQ1 measured **NOT_CAPABLE** for Gemma 4 embeddings.
+- Gecko: warm ≈172 ms/embed on AIN065; exact 2/2 and paraphrase 3/3 on the fixed micro-set; ~114 MB public artifact; ~3 KB/memory storage.
+- Absolute cosine scores for unrelated queries remain mid-0.6 → hybrid/threshold required.
+- Versioning closes the long-standing SCHEMA.md re-embed gap.
+
+**Consequences**
+- Phase 3.3 (if started) implements Gecko-backed `EmbeddingProvider`, versioning fields, background embed + backfill — not this spike.
+- `flutter_gemma_embeddings` may remain in `pubspec` inert until Phase 3.3; spike harness alone registers the backend today.
+- Larger relevance / battery / RSS work deferred to Phase 3.3/3.5 as documented unknowns in findings.
+
+---

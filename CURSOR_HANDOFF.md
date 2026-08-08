@@ -2,7 +2,7 @@
 
 **Purpose:** Onboard a new Cursor chat to continue Tend development without prior conversation history.  
 **Product:** Tend — offline-first personal relationship memory app (Flutter).  
-**Last updated:** Sprint **3 Phase 3.1** (keyword Search) implemented. Parent design [`SPRINT3.md`](SPRINT3.md); binding impl [`SPRINT3_1.md`](SPRINT3_1.md). **Next: Phase 3.2** embedding-provider spike — not Suggestion Engine.
+**Last updated:** Sprint **3 Phase 3.2** embedding spike complete — **Conditional Go** (Gecko, not Gemma 4). Findings: [`SPRINT3_2_FINDINGS.md`](SPRINT3_2_FINDINGS.md); ADR-013. **Next:** product confirm Phase 3.3 or stay keyword-only — not Suggestion Engine.
 
 ---
 
@@ -11,10 +11,11 @@
 - **Sprint 0 / 1A / 1B / 2A / 2B (through 2B.8):** Done and closed. Capture RC signed off — see [`RELEASE_READINESS_REPORT.md`](RELEASE_READINESS_REPORT.md) (**Go**; Conditional Pass conditions satisfied 2026-08-08).
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
 - **Foundation Cleanup (pre-Sprint 3):** Done — `FollowUp.deletedAt` schema contract; `PersonRepository.getByUuid` soft-delete filter; relative-date resolution + backfill. See `FOUNDATION_CLEANUP.md` / CHANGELOG.
-- **Sprint 3 Phase 3.1:** Done — global + person-scoped **keyword** Search, deterministic ranking, empty states, pluggable `SearchProvider`, on-device query log. Spec: [`SPRINT3_1.md`](SPRINT3_1.md).
-- **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text/voice/OCR/share capture → on-device extraction → confirmation → Isar save**, model setup gate, **keyword Search** (offline).
-- **Next work:** **Sprint 3 Phase 3.2** — embedding-provider spike (`SPRINT3.md`). Do **not** start Suggestion Engine / FollowUps (Sprint 4).
-- **Still later:** Phase 3.3–3.5 (semantic / hybrid / RC), then Sprint 4 Suggestion Engine.
+- **Sprint 3 Phase 3.1:** Done — global + person-scoped **keyword** Search.
+- **Sprint 3 Phase 3.2:** Done — embedding spike; **Conditional Go** on dedicated **Gecko** embedder (not Gemma 4 E2B). See [`SPRINT3_2_FINDINGS.md`](SPRINT3_2_FINDINGS.md) / ADR-013.
+- **Working app:** Auth, Isar, Person/Memory CRUD, Capture (4 modes), keyword Search (offline). Embeddings **not** wired in production.
+- **Next work:** Product decision on **Phase 3.3** (semantic search implementation per Conditional Go) **or** stay on keyword-only. Do **not** start Suggestion Engine / FollowUps (Sprint 4).
+- **Still later:** Phase 3.4 hybrid / 3.5 RC if 3.3 proceeds; then Sprint 4 Suggestion Engine.
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade; Search polish). Smaller accepted decisions: see `ADR.md`.
 
 **Binding docs:** `ARCHITECTURE.md`, `ADR.md`, `FEATURES.md`, `SCHEMA.md`, `DEVELOPMENT_ROADMAP.md`, `SPRINT0.md`–`SPRINT2B8.md`, `SPRINT3.md`, `SPRINT3_1.md`, `RELEASE_READINESS_REPORT.md`, `DEVLOG.md`, `BACKLOG.md`, this file.
