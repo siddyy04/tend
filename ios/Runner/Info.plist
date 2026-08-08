@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tend needs the microphone to capture voice notes about people in your circle.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Tend converts your voice note to text on this device so you can review it before saving a memory.</string>
 </dict>
 </plist>

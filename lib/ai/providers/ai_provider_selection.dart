@@ -6,6 +6,8 @@ import 'package:my_first_app/ai/providers/litert/litert_extraction_provider.dart
 import 'package:my_first_app/ai/providers/litert/litert_inference_adapter.dart';
 import 'package:my_first_app/ai/providers/litert/litert_prompt_builder.dart';
 import 'package:my_first_app/ai/providers/manual/manual_fallback_provider.dart';
+import 'package:my_first_app/ai/providers/platform/platform_transcription_provider.dart';
+import 'package:my_first_app/ai/providers/transcription_provider.dart';
 
 /// Shared LiteRT inference adapter — model path comes from [ModelDownloadManager].
 ///
@@ -39,4 +41,24 @@ final activeExtractionProvider = Provider<ExtractionProvider>((ref) {
     return const ManualFallbackProvider();
   }
   return ref.watch(liteRtExtractionProvider);
+});
+
+/// Platform speech recognition — never routes through LiteRT / Gemma.
+///
+/// Concrete MVP implementation. Prefer [activeTranscriptionProvider] in UI so
+/// a future long-form engine can replace this without Capture changes.
+final platformTranscriptionProvider =
+    Provider<PlatformTranscriptionProvider>((ref) {
+  final provider = PlatformTranscriptionProvider();
+  ref.onDispose(() {
+    provider.cancelListening();
+  });
+  return provider;
+});
+
+/// Active [TranscriptionProvider] — the only transcription dependency Capture
+/// / Voice should watch. Swap the returned implementation when a long-form
+/// engine is selected after evaluation (see BACKLOG).
+final activeTranscriptionProvider = Provider<TranscriptionProvider>((ref) {
+  return ref.watch(platformTranscriptionProvider);
 });

@@ -32,6 +32,8 @@ class _CaptureConfirmationScreenState
   CaptureDraftKey get _draftKey => CaptureDraftKey(
         index: 0,
         candidate: widget.args.candidate,
+        sourceType: widget.args.sourceType,
+        sourceRef: widget.args.sourceRef,
       );
 
   @override

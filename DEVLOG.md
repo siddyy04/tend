@@ -141,4 +141,14 @@
 - Prompt: insufficient-information notes must yield zero FunctionCalls (no invent-to-satisfy-tool); regression I1–I6 in `EXTRACTION_COMPLETENESS_BENCHMARK.md`
 - Backlog UX (not implemented): clearer empty-capture copy for insufficient notes
 
+### Phase 2B.4 — Voice capture
+
+- Mic on Capture → recording screen (indicator, timer, Stop, Cancel) → platform STT (`speech_to_text` via `PlatformTranscriptionProvider`) → editable transcript → Continue into existing `CaptureController.submitText` / confirmation path
+- Permissions: `permission_handler` + Android `RECORD_AUDIO` / speech RecognitionService query; iOS mic + speech usage strings
+- No live transcription UI, no AI during recording, cancel discards with no draft
+- `sourceType = voice` on save; audio file `sourceRef` deferred (backlog: persist audio + retention policy)
+- **Architecture:** Voice UI depends on `activeTranscriptionProvider` (abstract `TranscriptionProvider`); platform STT is the MVP concrete impl only — long-form conversational transcription is a product goal; engine evaluation is High Priority backlog (no new engine in 2B.4)
+- Speech language: auto-detect device/system locale when possible; otherwise prompt once; persist in Settings (`SpeechLocalePreferences`) for all future STT providers
+- Backlog: live transcription, waveform, VAD, voice analytics, audio retention; Capture UX Polish for first-class Voice/OCR/Share actions (after 2B.5–2B.6)
+
 

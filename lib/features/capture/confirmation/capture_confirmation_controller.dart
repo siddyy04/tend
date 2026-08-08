@@ -189,8 +189,8 @@ class CaptureConfirmationController extends AsyncNotifier<void> {
       ..extractionConfidence = extractionConfidence
       ..personMatchConfidence = personMatchConfidence
       ..sensitivityFlag = sensitivity
-      ..sourceType = SourceType.text
-      ..sourceRef = null
+      ..sourceType = key.sourceType
+      ..sourceRef = key.sourceRef
       ..needsUserConfirmation = needsConfirmation
       ..embedding = null
       ..createdAt = now

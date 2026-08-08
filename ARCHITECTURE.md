@@ -17,7 +17,7 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 | Local database | Isar (`isar_community` fork) | Source of truth, works fully offline |
 | State management | Riverpod (code-gen) | All business logic, no logic in widgets |
 | AI inference | On-device LiteRT-LM (via `flutter_gemma` + `flutter_gemma_litertlm`), behind an abstract provider interface; model chosen by `ModelCatalog` (MVP: Gemma 4 E2B) | Extraction + embeddings |
-| ASR (voice-to-text) | Platform-native speech-to-text | Not the LLM — see Section 6 for why |
+| ASR (voice-to-text) | Swappable `TranscriptionProvider` — MVP: platform-native STT; long-form engine TBD after evaluation | Not the LLM — see Section 6 |
 | OCR (screenshots) | Platform-native on-device OCR (ML Kit / Vision) | Not the LLM — see Section 6 for why |
 | Backend | Supabase | Auth + optional backup/sync only |
 | Semantic search | Local embeddings + brute-force cosine scan in Dart | No pgvector, no ANN index needed at MVP scale |
@@ -270,6 +270,16 @@ abstract class EmbeddingProvider {
 
 abstract class TranscriptionProvider {
   Future<String> transcribe(String audioFilePath);
+  Future<bool> isAvailable();
+  Future<List<TranscriptionLocale>> supportedLocales();
+  Future<TranscriptionLocale?> recommendedLocale();
+  Future<void> startListening({
+    required void Function(String words, bool isFinal) onResult,
+    void Function(String error)? onError,
+    String? localeId,
+  });
+  Future<String> stopListening();
+  Future<void> cancelListening();
 }
 
 abstract class OCRProvider {
@@ -279,12 +289,12 @@ abstract class OCRProvider {
 
 Concrete implementations live behind these interfaces:
 - `LiteRtExtractionProvider` — on-device LiteRT-LM via `flutter_gemma`, using **function-calling mode** to enforce the Deliverable 5 JSON schema. Which weights run is decided by `ModelCatalog` (MVP: Gemma 4 E2B), not by Capture/Confirmation.
-- `PlatformTranscriptionProvider` — wraps iOS Speech framework / Android `SpeechRecognizer`, **not the LLM**. See rationale below.
+- `PlatformTranscriptionProvider` — **Sprint 2B.4 MVP** wraps iOS Speech / Android `SpeechRecognizer` via `speech_to_text`, **not the LLM**. Selected through `activeTranscriptionProvider`. Acceptable for short notes; **not** the long-term conversational / multi-minute transcription solution (see product backlog evaluation). Future long-form engines (Whisper, cloud STT, etc.) must implement the same `TranscriptionProvider` interface so Capture → Extraction → Confirmation stay unchanged.
 - `PlatformOCRProvider` — wraps ML Kit / Vision on-device text recognition, **not the LLM**. Same rationale.
 - `ManualFallbackProvider` — a null-object implementation for devices that can't run a local model (Section 7): `extract()` returns "needs manual entry" instead of throwing, `embed()` returns null and search silently degrades to keyword-only. The app must never crash or block capture because the model isn't available — it should just quietly become the pre-AI version of itself.
 
-### Why ASR and OCR are platform-native, not the LLM, even though Gemma 3n is multimodal
-Gemma 3n *can* take audio and image input directly, but routing every voice note or screenshot through the full multimodal model is the heavier, slower, more battery-costly path for a job that mature, purpose-built on-device APIs already do accurately, near-instantly, and with zero extra download. Reserve the LLM for what only it can do — structured reasoning over text — and let the OS do transcription and text recognition. This also shrinks the required model footprint, which matters directly for Section 7's device-compatibility story.
+### Why ASR and OCR stay outside the LLM (and why the ASR *implementation* is swappable)
+Gemma *can* take audio and image input directly, but routing every voice note or screenshot through the full multimodal model is the heavier, slower, more battery-costly path for jobs that purpose-built ASR/OCR stacks can do. Reserve the LLM for structured reasoning over **text**. Platform STT is the MVP transcription backend; Tend’s product goal includes **long-form conversational voice**, so the transcription *provider* is intentionally abstracted and can be upgraded after a structured evaluation without touching Capture, Extraction, or Confirmation. Speech language preference (Settings) is provider-agnostic and should travel with any future engine.
 
 ---
 

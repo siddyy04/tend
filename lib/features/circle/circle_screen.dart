@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:my_first_app/app/app_routes.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/data/local/isar/collections/person.dart';
 import 'package:my_first_app/features/auth/auth_controller.dart';
@@ -56,6 +58,11 @@ class CircleScreen extends ConsumerWidget {
             onPressed: () => context.openCreatePerson(),
             tooltip: 'Add person',
             icon: const Icon(Icons.person_add_outlined),
+          ),
+          IconButton(
+            onPressed: () => context.push(AppRoutes.settings),
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
           ),
           TextButton(
             onPressed: () {

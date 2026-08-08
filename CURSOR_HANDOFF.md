@@ -11,7 +11,7 @@
 - **Sprint 0 / 1A / 1B / 2A:** Done and closed.
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
 - **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text capture → on-device extraction → confirmation → Isar save**, model setup gate (auto-download primary).
-- **Next work:** **Sprint 2B** — **2B.1–2B.3 done**. Next: **2B.4** Voice → OCR → share → clarification/confidence polish.
+- **Next work:** **Sprint 2B** — **2B.1–2B.4 done**. Next: **2B.5** OCR/Photo → share → clarification/confidence polish.
 - **Still later:** Sprint 3+ (opportunities, search, sync, settings polish).
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade). Smaller accepted decisions: see `ADR.md`.
 
@@ -62,7 +62,8 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 | Piece | Status |
 |---|---|
 | `ExtractionProvider` + result types | Done (no `clarificationNeeded` in 2A) |
-| `EmbeddingProvider` / `TranscriptionProvider` / `OCRProvider` | Interfaces only |
+| `TranscriptionProvider` | Abstract; MVP concrete = `PlatformTranscriptionProvider` via `activeTranscriptionProvider`; long-form engine TBD (High Priority backlog) |
+| `EmbeddingProvider` / `OCRProvider` | Interfaces only (OCR next in 2B.5) |
 | `LiteRtExtractionProvider` | Done — maps tool-call args → `ExtractionResult` |
 | `ManualFallbackProvider` | Done — empty candidates |
 | `LiteRtInferenceAdapter` | Done — LiteRT-LM + native FC; GPU→NPU→CPU; install kinds from catalog |

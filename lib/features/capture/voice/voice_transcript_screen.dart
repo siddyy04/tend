@@ -1,46 +1,49 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:my_first_app/ai/model_manager/device_capability_check.dart';
-import 'package:my_first_app/ai/model_manager/model_manager_providers.dart';
-import 'package:my_first_app/app/app_routes.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/features/capture/capture_submit_flow.dart';
-import 'package:my_first_app/features/capture/confirmation/capture_confirmation_args.dart';
 
-/// Global capture screen (Sprint 2A text + Sprint 2B.4 voice ingress).
-class CaptureScreen extends ConsumerStatefulWidget {
-  const CaptureScreen({super.key});
+/// Editable transcript after platform speech-to-text (Sprint 2B.4).
+///
+/// Continue runs the same [CaptureSubmitFlow] / [CaptureController.submitText]
+/// path as typed capture — it does not return to Capture first.
+class VoiceTranscriptScreen extends ConsumerStatefulWidget {
+  const VoiceTranscriptScreen({
+    super.key,
+    required this.initialTranscript,
+  });
+
+  final String initialTranscript;
 
   @override
-  ConsumerState<CaptureScreen> createState() => _CaptureScreenState();
+  ConsumerState<VoiceTranscriptScreen> createState() =>
+      _VoiceTranscriptScreenState();
 }
 
-class _CaptureScreenState extends ConsumerState<CaptureScreen> {
-  final _textController = TextEditingController();
+class _VoiceTranscriptScreenState
+    extends ConsumerState<VoiceTranscriptScreen> {
+  late final TextEditingController _controller;
   var _submitting = false;
   String? _statusMessage;
   Object? _error;
-  var _sourceType = SourceType.text;
-  String? _sourceRef;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTranscript);
+  }
 
   @override
   void dispose() {
-    _textController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _onMic() async {
-    FocusScope.of(context).unfocus();
-    // Voice recording → transcript owns submitText; do not expect a result here.
-    // (Recording uses pushReplacement to transcript, which would complete this
-    // push with null before the user finishes editing.)
-    await context.push<void>(AppRoutes.captureVoice);
-  }
-
   Future<void> _onContinue() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _submitting) return;
+
     FocusScope.of(context).unfocus();
     setState(() {
       _submitting = true;
@@ -52,11 +55,13 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       final outcome = await CaptureSubmitFlow.submitText(
         context: context,
         ref: ref,
-        text: _textController.text,
-        sourceType: _sourceType,
-        sourceRef: _sourceRef,
-        onNavigateToConfirmation: (route, CaptureConfirmationArgs args) {
-          context.push(route, extra: args);
+        text: text,
+        sourceType: SourceType.voice,
+        sourceRef: null,
+        onNavigateToConfirmation: (route, args) {
+          // Replace transcript so Back from confirmation returns to Capture,
+          // not the voice edit screen.
+          context.pushReplacement(route, extra: args);
         },
       );
 
@@ -87,12 +92,14 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   }
 
   Future<void> _onEnterManually() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _submitting) return;
     setState(() => _submitting = true);
     try {
       await CaptureSubmitFlow.enterManually(
         context: context,
         ref: ref,
-        text: _textController.text,
+        text: text,
       );
     } finally {
       if (mounted) {
@@ -101,27 +108,23 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     }
   }
 
+  void _onCancel() {
+    if (_submitting) return;
+    context.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final canSubmit = _textController.text.trim().isNotEmpty && !_submitting;
-    final tier = ref.watch(deviceAiTierProvider).asData?.value;
-    final modelReady =
-        ref.watch(currentModelReadyProvider).asData?.value ?? false;
-    final assisted =
-        tier != null &&
-        tier != DeviceAiTier.unsupported &&
-        modelReady;
+    final canContinue =
+        _controller.text.trim().isNotEmpty && !_submitting;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Capture'),
-        actions: [
-          IconButton(
-            tooltip: 'Voice capture',
-            onPressed: _submitting ? null : _onMic,
-            icon: const Icon(Icons.mic_none),
-          ),
-        ],
+        title: const Text('Edit transcript'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: _submitting ? null : _onCancel,
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -130,31 +133,23 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                assisted
-                    ? 'Type a note about someone in your circle, or use the microphone. You can review the memory before saving.'
-                    : 'Type a note about someone in your circle, or use the microphone. You’ll pick who it’s about and finish the details yourself.',
+                'Review and edit the transcript, then continue to extract memories.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: TextField(
-                  controller: _textController,
+                  controller: _controller,
                   maxLines: null,
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
                   enabled: !_submitting,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    hintText: 'e.g. Sarah mentioned her surgery is next month…',
                     alignLabelWithHint: true,
-                    labelText: 'Capture text',
+                    labelText: 'Transcript',
                   ),
-                  onChanged: (_) {
-                    setState(() {
-                      _sourceType = SourceType.text;
-                      _sourceRef = null;
-                    });
-                  },
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
               if (_statusMessage != null) ...[
@@ -173,7 +168,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               ],
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: canSubmit ? _onContinue : null,
+                onPressed: canContinue ? _onContinue : null,
                 child: _submitting
                     ? const SizedBox(
                         height: 20,
@@ -189,6 +184,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                   child: const Text('Enter manually'),
                 ),
               ],
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: _submitting ? null : _onCancel,
+                child: const Text('Cancel'),
+              ),
             ],
           ),
         ),

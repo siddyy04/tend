@@ -7,10 +7,13 @@ abstract final class AppRoutes {
   static const search = '/search';
   static const personNew = '/person/new';
   static const capture = '/capture';
+  static const captureVoice = '/capture/voice';
+  static const captureVoiceTranscript = '/capture/voice/transcript';
   static const captureConfirm = '/capture/confirm';
   static const captureConfirmSummary = '/capture/confirm/summary';
   static const captureConfirmMulti = '/capture/confirm/multi';
   static const modelSetup = '/capture/setup';
+  static const settings = '/settings';
   static const gemmaProbe = '/debug/gemma-probe';
 
   static String personEdit(String personUuid) => '/person/edit/$personUuid';

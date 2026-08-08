@@ -57,6 +57,8 @@ class _CaptureMultiConfirmationScreenState
     return CaptureDraftKey(
       index: index,
       candidate: widget.args.candidates[index],
+      sourceType: widget.args.sourceType,
+      sourceRef: widget.args.sourceRef,
     );
   }
 

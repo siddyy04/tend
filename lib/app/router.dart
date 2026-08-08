@@ -12,12 +12,15 @@ import '../features/capture/confirmation/capture_confirmation_screen.dart';
 import '../features/capture/confirmation/capture_multi_confirmation_screen.dart';
 import '../features/capture/confirmation/capture_multi_summary_screen.dart';
 import '../features/capture/model_setup_screen.dart';
+import '../features/capture/voice/voice_recording_screen.dart';
+import '../features/capture/voice/voice_transcript_screen.dart';
 import '../features/circle/circle_screen.dart';
 import '../features/memory_form/memory_form_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
 import '../features/person_form/person_form_screen.dart';
 import '../features/person_profile/person_profile_screen.dart';
 import '../features/search/search_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../debug/gemma_probe_screen.dart';
 import 'app_routes.dart';
 
@@ -156,6 +159,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.modelSetup,
         builder: (context, state) => const ModelSetupScreen(),
       ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.settings,
+        builder: (context, state) => const SettingsScreen(),
+      ),
       if (kDebugMode)
         GoRoute(
           parentNavigatorKey: _rootNavigatorKey,
@@ -166,6 +174,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         path: AppRoutes.capture,
         builder: (context, state) => const CaptureScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.captureVoice,
+        builder: (context, state) => const VoiceRecordingScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.captureVoiceTranscript,
+        builder: (context, state) {
+          final transcript = state.extra;
+          if (transcript is! String || transcript.trim().isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Missing transcript')),
+            );
+          }
+          return VoiceTranscriptScreen(initialTranscript: transcript);
+        },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

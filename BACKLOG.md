@@ -9,6 +9,70 @@
 
 ## High Priority
 
+### Evaluate long-form speech transcription providers
+**Problem**
+Tend’s product vision includes users speaking long conversations, stories, reflections, and updates — not only short memory snippets. Sprint 2B.4 MVP uses platform STT (`PlatformTranscriptionProvider` / `speech_to_text`), which is acceptable for short notes but is **not** a long-term solution (Android session length, pause timeouts, truncation, and dictation quality).
+
+**Sprint / area**
+Future dedicated evaluation sprint (after Sprint 2B functionality). **Do not implement a new engine until this evaluation completes.** Capture / Extraction / Confirmation must stay unchanged when the provider is swapped (`activeTranscriptionProvider`).
+
+**Proposed solution**
+Run a structured comparison; **do not pick an engine in this backlog item itself**. Document findings and recommend 1–2 candidates for a later implementation sprint.
+
+**Candidates to compare (non-exhaustive)**
+- Android platform STT (current MVP baseline)
+- iOS Speech framework (current MVP baseline on Apple)
+- Whisper (on-device)
+- Whisper (cloud)
+- Gemini / Google Speech APIs
+- Other high-quality long-form transcription engines as relevant
+
+**Evaluation criteria**
+- Long-form transcription accuracy (multi-minute conversational speech)
+- Multi-minute recording support (pauses, session continuity)
+- Privacy (on-device vs cloud; audio retention)
+- Offline capability
+- Latency (time to editable transcript)
+- Battery usage
+- Memory / RAM usage (esp. alongside Gemma / LiteRT)
+- Cost (if cloud)
+- Ease of integration with `TranscriptionProvider` (listen-session and/or file `transcribe`)
+- Multilingual support (reuse Settings speech-language preference)
+
+**Related**
+- `TranscriptionProvider` + `activeTranscriptionProvider` — swap point
+- Speech language preference in Settings (`SpeechLocalePreferences`)
+- Existing medium-priority voice items (waveform, VAD, live transcription, audio `sourceRef`) remain separate
+- Downstream product vision: **Conversation Mode** (below) — depends on a capable long-form transcription foundation
+
+---
+
+### Conversation Mode — continuous long-form voice → incremental memories
+**Problem**
+MVP Voice is a single session: record → one transcript → one extraction pass. Product vision goes further: users should feel comfortable speaking for several minutes (conversations, stories, reflections, updates) as if talking to a trusted friend, while Tend continuously turns speech into memory candidates.
+
+**Example**
+User speaks for several minutes. Tend continuously segments speech into memory candidates instead of waiting for one final transcript.
+
+**Sprint / area**
+**Out of scope for MVP / Sprint 2B.** Post–long-form STT evaluation and after a capable transcription provider is in place. Do not start this while platform STT remains the only engine.
+
+**Requires**
+- Streaming transcription
+- Incremental extraction (segment → candidate(s) without blocking the whole conversation)
+- Conversational pause detection (segment boundaries, not crude auto-stop alone)
+- Recovery after interruptions (app backgrounded, STT hiccups, brief silence, errors)
+
+**Proposed direction (not an implementation plan yet)**
+- Keep Capture → Confirmation → Save as the user trust boundary; Conversation Mode feeds candidates into review rather than auto-saving silently.
+- Preserve `TranscriptionProvider` / `ExtractionProvider` separation — audio still never goes to Gemma as a live multimodal stream unless a future ADR explicitly changes that.
+- Depends on High Priority: “Evaluate long-form speech transcription providers.”
+
+**Explicitly not MVP**
+- No streaming extraction UI, no continuous listen loop, no Conversation Mode chrome in Sprint 2B.
+
+---
+
 ### Person → memory cascade delete
 **Problem**
 `FEATURES.md` requires deleting a person to cascade to their memories, follow-ups, and suggestion history. Sprint 1B intentionally deferred this.
@@ -107,6 +171,78 @@ Capture UX (future sprint — not blocking Sprint 2B)
 **Related**
 - `EXTRACTION_COMPLETENESS_BENCHMARK.md` — Insufficient information (I1–I6)
 - Prompt already instructs zero FunctionCalls when no explicit fact exists
+
+---
+
+### Capture UX Polish — first-class Voice / OCR / Share actions
+**Problem**
+Voice (and, once shipped, OCR and Share) enter Capture via secondary controls (e.g. a small AppBar microphone icon). That works functionally but underplays Voice as a primary way to capture memories.
+
+**Sprint / area**
+**Capture UX Polish** — after Sprint 2B OCR (2B.5) and Share (2B.6) are complete. Do **not** redesign Capture chrome during 2B functionality phases.
+
+**Proposed solution**
+- Redesign the Capture screen so **Voice**, **OCR/Photo**, and **Share** are first-class actions alongside typed notes (not AppBar-only secondary icons).
+- Keep a single shared extract → confirm → save pipeline; polish is presentation and entry hierarchy only.
+- Decide layout (e.g. primary action cluster, mode switcher, or empty-state CTAs) once all three ingress methods exist and can be designed together.
+
+---
+
+### Voice capture — live transcription during recording
+**Problem**
+Sprint 2B.4 hides partial ASR results; users cannot see words appear while speaking.
+
+**Proposed solution**
+- Optionally show live partial transcript on the recording screen.
+- Keep extraction gated until Stop → edit → Continue (model still never receives audio).
+
+---
+
+### Voice capture — waveform animation
+**Problem**
+Recording UI has indicator + timer only; no amplitude feedback.
+
+**Proposed solution**
+- Add a simple waveform or level meter while recording (cosmetic only).
+
+---
+
+### Voice capture — Voice Activity Detection (auto-stop)
+**Problem**
+Users must tap Stop manually; long silences keep the session open.
+
+**Proposed solution**
+- Detect sustained silence and offer or perform auto-stop after a threshold.
+- Keep an explicit Stop control.
+
+---
+
+### Voice capture — offline speech recognition evaluation
+**Problem**
+Platform ASR quality and offline availability vary by OS/vendor.
+
+**Status**
+**Superseded / folded into High Priority:** “Evaluate long-form speech transcription providers.” Use that item as the authoritative evaluation task (includes offline capability as a criterion). Keep this note so older references still resolve.
+
+---
+
+### Voice capture — analytics
+**Problem**
+No product telemetry for voice funnel quality.
+
+**Proposed solution**
+- Track recording duration, whether the transcript was edited before Continue, and downstream extraction success/empty/failure (privacy-preserving; no raw audio/transcript content in analytics payloads unless explicitly approved later).
+
+---
+
+### Voice capture — persist audio file as `sourceRef` + retention/deletion policy
+**Problem**
+Sprint 2B.4 sets `sourceType = voice` but does not yet store a local audio file path in `Memory.sourceRef` (platform listen-session ASR does not yield a file). Retention/deletion of any future audio captures is undefined.
+
+**Proposed solution**
+- Record audio to app documents (captures subfolder) when mic exclusivity allows, or adopt a file-capable STT path.
+- Set `sourceRef` to that path on save.
+- Define retention (e.g. delete with soft-deleted memory, max age, user purge) and implement cleanup.
 
 ---
 

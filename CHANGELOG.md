@@ -6,6 +6,25 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.6 — Voice capture (Sprint 2B.4)
+
+## Added
+
+### Capture
+- Microphone entry on Capture: record → platform speech-to-text → editable transcript → existing extraction / confirmation flow
+- Recording screen with indicator, elapsed timer, Stop, and Cancel
+- Microphone permission handling (clear deny / permanently denied → settings messaging; no repeated prompts when permanently denied)
+- Saved memories from this path use `sourceType = voice` (audio file `sourceRef` still backlog)
+- Speech language: device locale when available, otherwise a one-time picker; change anytime in Settings
+
+## Notes
+
+- ASR stays behind `TranscriptionProvider` / `activeTranscriptionProvider` — never routes live audio into Gemma / LiteRT
+- Platform STT is the MVP backend; long-form conversational transcription remains a product goal (engine evaluation backlog)
+- Typed capture unchanged; voice only produces text for the existing pipeline
+
+---
+
 # v0.3.5 — Create Person during capture (Sprint 2B.3)
 
 ## Added
