@@ -197,5 +197,29 @@
 - Device QA (AIN065, Android 16, GPU): grounding probe 11/11; warmAvg≈6.3s; coldStart≈11.3s; peakRss≈1.15 GB; Typed full path + Share cold-start verified
 - Owner smokes (2026-08-08): Voice→Save, OCR→Save, airplane-mode extract — no release-blocking issues; Conditional Pass conditions satisfied
 - `RELEASE_READINESS_REPORT.md`: **Go** (product sign-off recorded). Sprint 2 closed.
-- Next: **Sprint 3 planning** (architecture review) — no Sprint 3 implementation until plan is approved
+- Next was **Sprint 3 planning** → `SPRINT3.md` frozen (Search); Phase 3.1 spec `SPRINT3_1.md`
+
+## Sprint 3 Phase 3.1 — Keyword Search
+
+- Replaced Search tab stub with global keyword/substring Search; person-scoped Search from Profile AppBar
+- Architecture: `SearchProvider` + `KeywordSearchProvider`; pure ranking in `domain/rules/search_ranking_rules.dart`; repos only return active lists (ADR-003/008)
+- Matching: `eventText`, category name/label, person name, `dateValueRaw` / formatted `dateValue`, `quoteEvidence`
+- Ranking: exact phrase > all-terms > partial; eventText boost; recency (`dateValue` else `createdAt`); stable `uuid` tiebreak; flat list only
+- Analytics: `LocalSearchAnalytics` — debug print + durable on-device log key `search_query_log_v1` (cap 200)
+- Debounce 300ms; no network / LiteRT / embeddings on the query path
+- Tests: `search_ranking_rules_test.dart`, `keyword_search_provider_test.dart` (fake repos)
+- Latency: designed for ≤~500 memories Dart scan; measure on device during manual QA (target felt ≤300ms)
+- Docs: CHANGELOG v0.4.0; backlog search polish (sort toggle, grouping, scroll-to-memory)
+- **Out of 3.1:** embeddings, semantic/hybrid, Suggestion Engine, FollowUps
+- **Next:** Phase 3.2 embedding-provider spike (ADR outcome); Suggestion Engine remains Sprint 4
+
+## Capture Quality — pronoun binding (pre–Phase 3.2)
+
+- Device trace (`lib/debug/pronoun_rahul_trace_main.dart` on AIN065): note “Met Rahul yesterday / He got selected by OpenAI” → **ONE_FUNCTION_CALL** (~6.9s GPU); `personMentioned=Rahul`, quote=`He got selected by OpenAI`, merged date `yesterday`; meeting fact missing
+- Prompt: smallest completeness lines + Rahul example + anti-merge tool description; tool `personMentioned` must be name not pronoun
+- App: `bindPronounPersonMentions` in `extraction_validation_rules.dart`; wired in `LiteRtExtractionProvider` after map; unresolved pronouns/empty dropped
+- Fail-safe: bind only when exactly one distinct explicit name seen so far in the batch
+- Grounding: whitespace-collapsed verbatim match (newline vs space) so multi-sentence quotes are not false-rejected
+- Post-prompt re-trace: still often **ONE_FUNCTION_CALL** (model merge); binder cannot invent the missing meeting FC — remaining gap is model completeness
+- Tests: `test/domain/rules/pronoun_person_binding_test.dart`; benchmark C6–C9
 

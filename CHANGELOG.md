@@ -6,6 +6,42 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.4.1 — Capture Quality: pronoun binding
+
+## Fixed
+
+- Pronoun continuations in multi-sentence notes (e.g. “Met Rahul yesterday. He got selected by OpenAI.”) — prompt asks for separate tool calls with the named person; app binds empty/pronoun `personMentioned` when a single prior name is unambiguous
+- Verbatim quote grounding no longer false-rejects when only whitespace/newlines differ from the note
+
+## Notes
+
+- Device trace pre-fix: one merged FunctionCall (OpenAI fact kept, meeting fact dropped)
+- Post-fix device re-trace: still often one FunctionCall (model merge); binder cannot invent a missing call — remaining completeness gap is model-side
+- App-layer binder fails safe when two+ distinct people already appeared (no guessing)
+- ADR-012 unchanged; no NLP coreference pipeline
+- Regression: `pronoun_person_binding_test.dart`; completeness cases C6–C9
+
+---
+
+# v0.4.0 — Keyword Search (Sprint 3 Phase 3.1)
+
+## Added
+
+- **Global Search** tab: ask about a memory with keyword/substring matching across the Circle
+- **Person-scoped Search** from Person Profile (Search action)
+- Deterministic relevance ranking (exact phrase → all terms → partial; `eventText` boost; recency tiebreak)
+- Helpful empty states (idle examples, empty corpus, zero results)
+- On-device search-query logging (SharedPreferences, capped; debug analytics hooks)
+
+## Notes
+
+- Phase 3.1 is **keyword Search only** — an intentional shippable slice per `SPRINT3.md` / `SPRINT3_1.md`. Semantic / hybrid ranking is Phase 3.2–3.4 (not a permanent retreat from embeddings).
+- Pluggable `SearchProvider` boundary is in place for later semantic providers without UI rewrite
+- Capture / LiteRT / embedding write paths unchanged
+- **Next:** Phase 3.2 embedding-provider spike (not Suggestion Engine)
+
+---
+
 # v0.3.11 — Capture Release Candidate (Sprint 2B.8)
 
 ## Fixed

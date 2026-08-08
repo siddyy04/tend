@@ -56,86 +56,116 @@ class PersonProfileScreen extends ConsumerWidget {
     final memoriesAsync = ref.watch(personMemoriesProvider(personUuid));
     final timeline = ref.watch(personMemoryTimelineProvider(personUuid));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            tooltip: 'Edit person',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.openEditPerson(personUuid),
+    final canPop = context.canPop();
+
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go(AppRoutes.circle);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Profile'),
+          leading: IconButton(
+            tooltip: 'Back',
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                // Entered via go() (e.g. post-capture) — no stack to pop.
+                context.go(AppRoutes.circle);
+              }
+            },
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.openCreateMemory(personUuid),
-        tooltip: 'Add memory',
-        child: const Icon(Icons.add),
-      ),
-      body: personAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(error.toString(), textAlign: TextAlign.center),
-          ),
+          actions: [
+            IconButton(
+              tooltip: 'Search memories',
+              icon: const Icon(Icons.search),
+              onPressed: () => context.openPersonSearch(personUuid),
+            ),
+            IconButton(
+              tooltip: 'Edit person',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.openEditPerson(personUuid),
+            ),
+          ],
         ),
-        data: (person) {
-          if (person == null) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'This person is no longer in your circle.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              PersonProfileHeader(person: person),
-              const Divider(height: 1),
-              Expanded(
-                child: memoriesAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(error.toString(), textAlign: TextAlign.center),
-                    ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.openCreateMemory(personUuid),
+          tooltip: 'Add memory',
+          child: const Icon(Icons.add),
+        ),
+        body: personAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(error.toString(), textAlign: TextAlign.center),
+            ),
+          ),
+          data: (person) {
+            if (person == null) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'This person is no longer in your circle.',
+                    textAlign: TextAlign.center,
                   ),
-                  data: (memories) {
-                    if (memories.isEmpty) {
-                      return MemoryTimelineEmptyState(
-                        onAddMemory: () => context.openCreateMemory(personUuid),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: timeline.length,
-                      itemBuilder: (context, index) {
-                        final memory = timeline[index];
-                        return MemoryListTile(
-                          memory: memory,
-                          onTap: () => context.openEditMemory(
-                            personUuid,
-                            memory.uuid,
-                          ),
-                          onDelete: () =>
-                              _confirmAndDeleteMemory(context, ref, memory),
-                        );
-                      },
-                    );
-                  },
                 ),
-              ),
-            ],
-          );
-        },
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PersonProfileHeader(person: person),
+                const Divider(height: 1),
+                Expanded(
+                  child: memoriesAsync.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          error.toString(),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    data: (memories) {
+                      if (memories.isEmpty) {
+                        return MemoryTimelineEmptyState(
+                          onAddMemory: () =>
+                              context.openCreateMemory(personUuid),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: timeline.length,
+                        itemBuilder: (context, index) {
+                          final memory = timeline[index];
+                          return MemoryListTile(
+                            memory: memory,
+                            onTap: () => context.openEditMemory(
+                              personUuid,
+                              memory.uuid,
+                            ),
+                            onDelete: () =>
+                                _confirmAndDeleteMemory(context, ref, memory),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -145,4 +175,7 @@ class PersonProfileScreen extends ConsumerWidget {
 extension PersonProfileNavigation on BuildContext {
   void openPersonProfile(String personUuid) =>
       push(AppRoutes.personProfile(personUuid));
+
+  void openPersonSearch(String personUuid) =>
+      push(AppRoutes.personSearch(personUuid));
 }

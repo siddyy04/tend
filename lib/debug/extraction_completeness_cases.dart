@@ -99,6 +99,56 @@ const extractionCompletenessCases = <ExtractionCompletenessCase>[
       'physiotherapy',
     ],
   ),
+  ExtractionCompletenessCase(
+    id: 'c6_rahul_openai_pronoun',
+    description:
+        'QA repro: meeting + pronoun career fact must be two calls, both Rahul.',
+    note: 'Met Rahul yesterday.\nHe got selected by OpenAI.',
+    expectedCount: 2,
+    expectedPerson: 'Rahul',
+    factHints: [
+      'Met Rahul',
+      'OpenAI',
+    ],
+  ),
+  ExtractionCompletenessCase(
+    id: 'c7_ambiguous_he_two_people',
+    description:
+        'Two named people then He — model should not guess; binder fails safe.',
+    note:
+        'Rahul joined OpenAI. Priya moved to Berlin. He loves tea.',
+    expectedCount: 2,
+    expectedPerson: '',
+    factHints: [
+      'OpenAI',
+      'Berlin',
+    ],
+  ),
+  ExtractionCompletenessCase(
+    id: 'c8_multi_people_explicit',
+    description: 'Two people, each named explicitly — no pronoun binding needed.',
+    note: 'Rahul likes tea. Priya plays cricket.',
+    expectedCount: 2,
+    expectedPerson: '',
+    factHints: [
+      'tea',
+      'cricket',
+    ],
+  ),
+  ExtractionCompletenessCase(
+    id: 'c9_mixed_family_ambiguous_he',
+    description:
+        'Dad then Mom then He — ambiguous; do not invent Dad/Mom binding.',
+    note:
+        'Dad retired last month. Mom started physiotherapy. '
+        'He walks every morning.',
+    expectedCount: 2,
+    expectedPerson: '',
+    factHints: [
+      'retired',
+      'physiotherapy',
+    ],
+  ),
 ];
 
 /// Insufficient-information notes: must yield zero native FunctionCalls.

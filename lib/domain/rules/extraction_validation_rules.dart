@@ -16,14 +16,20 @@ bool hasGroundingQuote(ExtractedMemoryCandidate candidate) {
 
 /// True when [quote] appears as a contiguous substring of [sourceText].
 ///
-/// Comparison is **case-insensitive** after trim; still requires a contiguous
-/// match (hallucination guard for invented phrases).
+/// Comparison is **case-insensitive** after trim; internal whitespace is
+/// collapsed so newline vs space does not falsely reject a literal quote.
+/// Still requires contiguous content match (hallucination guard for invented
+/// phrases).
 bool textAppearsVerbatimInSource(String sourceText, String quote) {
   final q = quote.trim();
   if (q.isEmpty) {
     return false;
   }
-  return sourceText.toLowerCase().contains(q.toLowerCase());
+  return _foldForVerbatim(sourceText).contains(_foldForVerbatim(q));
+}
+
+String _foldForVerbatim(String raw) {
+  return raw.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 }
 
 /// True when [candidate.quoteEvidence] is a verbatim slice of [sourceText].
@@ -85,8 +91,9 @@ String? literalExtractionRejectionReason(
   String? dateValueRaw,
   bool followUpSuggested = false,
   String? followUpNote,
+  bool requirePersonMentioned = true,
 }) {
-  if (personMentioned.trim().isEmpty) {
+  if (requirePersonMentioned && personMentioned.trim().isEmpty) {
     return 'missing personMentioned';
   }
   if (eventText.trim().isEmpty) {
@@ -309,5 +316,96 @@ List<ClarificationNeeded> ambiguousPersonClarifications({
       );
     }
   }
+  return out;
+}
+
+/// True when [raw] is a standalone personal pronoun (not a real name).
+bool isPronounPersonMention(String raw) {
+  switch (raw.trim().toLowerCase()) {
+    case 'he':
+    case 'she':
+    case 'they':
+    case 'him':
+    case 'her':
+    case 'them':
+    case 'his':
+    case 'hers':
+    case 'their':
+    case 'theirs':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// Whether [personMentioned] needs pronoun / empty-person binding.
+bool needsPronounPersonBinding(String personMentioned) {
+  final trimmed = personMentioned.trim();
+  return trimmed.isEmpty || isPronounPersonMention(trimmed);
+}
+
+/// Binds empty / pronoun [ExtractedMemoryCandidate.personMentioned] values
+/// within one capture note, in document order.
+///
+/// **Safe rule:** bind only when exactly one distinct explicit person name has
+/// already appeared earlier in [candidates]. If zero or two+ distinct names
+/// have appeared, leave the candidate unchanged (fail safe — no guessing).
+///
+/// Re-resolves Circle name match for any rebound candidate. Does not invent
+/// new memories or change quotes. ADR-012 unchanged.
+List<ExtractedMemoryCandidate> bindPronounPersonMentions({
+  required List<ExtractedMemoryCandidate> candidates,
+  required Iterable<({String uuid, String name})> knownPeople,
+}) {
+  if (candidates.isEmpty) return candidates;
+
+  final distinctExplicitLower = <String>{};
+  String? soleExplicitDisplay;
+  final out = <ExtractedMemoryCandidate>[];
+
+  for (final candidate in candidates) {
+    final mention = candidate.personMentioned.trim();
+
+    if (!needsPronounPersonBinding(mention)) {
+      final key = mention.toLowerCase();
+      distinctExplicitLower.add(key);
+      if (distinctExplicitLower.length == 1) {
+        soleExplicitDisplay = mention;
+      } else {
+        soleExplicitDisplay = null;
+      }
+      out.add(candidate);
+      continue;
+    }
+
+    // Pronoun or empty — bind only with a single unambiguous antecedent.
+    if (distinctExplicitLower.length == 1 && soleExplicitDisplay != null) {
+      final boundName = soleExplicitDisplay;
+      final match = resolveUniquePersonNameMatch(
+        personMentioned: boundName,
+        knownPeople: knownPeople,
+      );
+      out.add(
+        ExtractedMemoryCandidate(
+          personMentioned: boundName,
+          personMatchUuid: match.uuid,
+          personMatchConfidence: match.confidence,
+          category: candidate.category,
+          eventText: candidate.eventText,
+          quoteEvidence: candidate.quoteEvidence,
+          datePrecision: candidate.datePrecision,
+          dateValueRaw: candidate.dateValueRaw,
+          dateValue: candidate.dateValue,
+          importanceScore: candidate.importanceScore,
+          extractionConfidence: candidate.extractionConfidence,
+          followUpSuggested: candidate.followUpSuggested,
+          followUpNote: candidate.followUpNote,
+        ),
+      );
+    } else {
+      out.add(candidate);
+    }
+  }
+
   return out;
 }

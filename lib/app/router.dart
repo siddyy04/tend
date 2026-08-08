@@ -25,6 +25,7 @@ import '../features/memory_form/memory_form_screen.dart';
 import '../features/opportunities/opportunities_screen.dart';
 import '../features/person_form/person_form_screen.dart';
 import '../features/person_profile/person_profile_screen.dart';
+import '../features/search/person_search_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../debug/gemma_probe_screen.dart';
@@ -143,6 +144,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final personUuid = state.pathParameters['personUuid']!;
           return PersonProfileScreen(personUuid: personUuid);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/profile/:personUuid/search',
+        builder: (context, state) {
+          final personUuid = state.pathParameters['personUuid']!;
+          return PersonSearchScreen(personUuid: personUuid);
         },
       ),
       GoRoute(

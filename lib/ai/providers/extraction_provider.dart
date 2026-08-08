@@ -109,6 +109,40 @@ class ExtractedMemoryCandidate {
   /// Present in model output — discarded after confirmation (Sprint 2A).
   final String? followUpNote;
 
+  ExtractedMemoryCandidate copyWith({
+    String? personMentioned,
+    String? personMatchUuid,
+    double? personMatchConfidence,
+    MemoryCategory? category,
+    String? eventText,
+    String? quoteEvidence,
+    DatePrecision? datePrecision,
+    String? dateValueRaw,
+    DateTime? dateValue,
+    int? importanceScore,
+    double? extractionConfidence,
+    bool? followUpSuggested,
+    String? followUpNote,
+  }) {
+    return ExtractedMemoryCandidate(
+      personMentioned: personMentioned ?? this.personMentioned,
+      personMatchUuid: personMatchUuid ?? this.personMatchUuid,
+      personMatchConfidence:
+          personMatchConfidence ?? this.personMatchConfidence,
+      category: category ?? this.category,
+      eventText: eventText ?? this.eventText,
+      quoteEvidence: quoteEvidence ?? this.quoteEvidence,
+      datePrecision: datePrecision ?? this.datePrecision,
+      dateValueRaw: dateValueRaw ?? this.dateValueRaw,
+      dateValue: dateValue ?? this.dateValue,
+      importanceScore: importanceScore ?? this.importanceScore,
+      extractionConfidence:
+          extractionConfidence ?? this.extractionConfidence,
+      followUpSuggested: followUpSuggested ?? this.followUpSuggested,
+      followUpNote: followUpNote ?? this.followUpNote,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     return other is ExtractedMemoryCandidate &&

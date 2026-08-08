@@ -7,6 +7,9 @@ abstract class PersonRepository {
   /// Active (non-tombstoned) people as a flat list. No grouping.
   Stream<List<Person>> watchActivePeople();
 
+  /// Snapshot of active people (for Search attribution / name matching).
+  Future<List<Person>> getActivePeople();
+
   Future<Person?> getByUuid(String uuid);
 
   Future<void> create(Person person);
@@ -27,6 +30,11 @@ class IsarPersonRepository implements PersonRepository {
   @override
   Stream<List<Person>> watchActivePeople() {
     return _isar.persons.filter().deletedAtIsNull().watch(fireImmediately: true);
+  }
+
+  @override
+  Future<List<Person>> getActivePeople() {
+    return _isar.persons.filter().deletedAtIsNull().findAll();
   }
 
   @override

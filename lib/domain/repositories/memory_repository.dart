@@ -7,6 +7,14 @@ abstract class MemoryRepository {
   /// Active (non-tombstoned) memories for [personUuid] as a flat unsorted list.
   Stream<List<Memory>> watchAllForPerson(String personUuid);
 
+  /// All active (non-tombstoned) memories across the Circle — unsorted.
+  ///
+  /// Used by Search; ranking stays outside the repository (ADR-003).
+  Future<List<Memory>> getActiveMemories();
+
+  /// Active memories for one person — unsorted. Soft-delete filtered.
+  Future<List<Memory>> getActiveMemoriesForPerson(String personUuid);
+
   /// Returns null if missing or soft-deleted.
   Future<Memory?> getByUuid(String uuid);
 
@@ -33,6 +41,21 @@ class IsarMemoryRepository implements MemoryRepository {
         .and()
         .deletedAtIsNull()
         .watch(fireImmediately: true);
+  }
+
+  @override
+  Future<List<Memory>> getActiveMemories() {
+    return _isar.memorys.filter().deletedAtIsNull().findAll();
+  }
+
+  @override
+  Future<List<Memory>> getActiveMemoriesForPerson(String personUuid) {
+    return _isar.memorys
+        .filter()
+        .personUuidEqualTo(personUuid)
+        .and()
+        .deletedAtIsNull()
+        .findAll();
   }
 
   @override

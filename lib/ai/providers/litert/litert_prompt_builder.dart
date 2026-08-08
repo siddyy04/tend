@@ -78,13 +78,17 @@ class LiteRtPromptBuilder {
         'Extract one stable, independently useful memory fact from the note. '
         'Call this tool once per such memory — including status, progress, '
         'and recovery updates when they provide lasting relationship context. '
+        'Never merge two independent facts into one call (e.g. a meeting fact '
+        'and a later career fact must be two calls, even if the second sentence '
+        'uses He/She/They). '
         'If the note does not contain at least one explicit person and a stable '
         'memory or relationship fact, do not call this tool at all. '
         'Never invent a memory simply to satisfy the tool. '
         'Zero calls is a valid outcome. '
         'Never emit placeholder values such as N/A, None, Unknown, or "-". '
         'Do not invent, infer, or complete missing details. '
-        'quoteEvidence must be an exact substring of the note. '
+        'quoteEvidence must be an exact contiguous substring of the note '
+        '(prefer the single sentence that supports this memory). '
         'If the note contains any explicit or relative temporal phrase, '
         'copy that phrase verbatim into dateValueRaw. '
         'Pick exactly one category from the allowed enum list.',
@@ -94,7 +98,10 @@ class LiteRtPromptBuilder {
         'personMentioned': {
           'type': 'string',
           'description':
-              'Person name exactly as written in the note. Empty if none.',
+              'Person name from the note (not a pronoun). If the sentence '
+              'uses He/She/They/Him/Her referring to someone named earlier, '
+              'set this to that person\'s name. Empty only if no person can '
+              'be identified.',
         },
         'eventText': {
           'type': 'string',
@@ -185,6 +192,10 @@ class LiteRtPromptBuilder {
       'Completeness: if one person has several stable facts in the Note, '
       'emit several extract_memories tool calls (never merge). '
       'Include recovery/progress/status updates when present in the Note. '
+      'If a later sentence uses He/She/They/Him/Her for a person already '
+      'named earlier in the Note, still emit a separate tool call for that '
+      'fact and set personMentioned to that person\'s name (never the '
+      'pronoun; never merge with an earlier fact). '
       'If there is no explicit person or stable memory fact, emit zero calls — '
       'do not fabricate and do not fill fields with N/A, None, Unknown, or "-". '
       'quoteEvidence and eventText must use only words from the Note below — '
@@ -193,7 +204,9 @@ class LiteRtPromptBuilder {
     buffer.writeln(
       'Example pattern: a career fact and a preference about the same person '
       '→ two tool calls. A surgery fact and a recovering-well fact about the '
-      'same person → two tool calls (do not drop recovering-well).',
+      'same person → two tool calls (do not drop recovering-well). '
+      'Example: "Met Rahul yesterday. He got selected by OpenAI." → two tool '
+      'calls (meeting + selection), both with personMentioned=Rahul.',
     );
     buffer.writeln();
     if (knownPeople.isNotEmpty) {

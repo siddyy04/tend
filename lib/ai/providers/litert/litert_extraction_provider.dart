@@ -147,7 +147,38 @@ class LiteRtExtractionProvider implements ExtractionProvider {
         debugPrint('================================');
       }
 
-      if (candidates.isEmpty) {
+      final knownPeopleTuples = knownPeople.map(
+        (p) => (uuid: p.uuid, name: p.name),
+      );
+      final bound = bindPronounPersonMentions(
+        candidates: candidates,
+        knownPeople: knownPeopleTuples,
+      );
+      // Drop unresolved pronouns / still-empty persons (fail safe).
+      final finalized = bound
+          .where((c) => !needsPronounPersonBinding(c.personMentioned))
+          .toList(growable: false);
+      if (kDebugMode) {
+        final dropped = bound.length - finalized.length;
+        if (dropped > 0) {
+          debugPrint(
+            '[LiteRtExtractionProvider] dropped $dropped unresolved '
+            'pronoun/empty person candidate(s) after binding',
+          );
+        }
+        for (var i = 0; i < candidates.length && i < bound.length; i++) {
+          final before = candidates[i].personMentioned;
+          final after = bound[i].personMentioned;
+          if (before != after) {
+            debugPrint(
+              '[LiteRtExtractionProvider] bound #$i '
+              '"$before" → "$after"',
+            );
+          }
+        }
+      }
+
+      if (finalized.isEmpty) {
         // Model called the tool but nothing mapped — valid empty for UX;
         // keep detail for debug logs only (not CaptureSubmitFailed).
         lastFailureReason =
@@ -159,7 +190,7 @@ class LiteRtExtractionProvider implements ExtractionProvider {
         }
       }
 
-      return ExtractionResult(candidates: candidates);
+      return ExtractionResult(candidates: finalized);
     } catch (e, st) {
       final line = st.toString().split('\n').firstWhere(
             (l) => l.contains('litert_') || l.trim().startsWith('#0'),
@@ -247,8 +278,19 @@ class LiteRtExtractionProvider implements ExtractionProvider {
       final quoteEvidence = '${raw['quoteEvidence'] ?? ''}'.trim();
       final dateValueRaw = _nullableString(raw['dateValueRaw']);
       final category = validatedCategory('${raw['category'] ?? ''}');
+      final pendingPersonBind = needsPronounPersonBinding(personMentioned);
 
-      if (personMentioned.isEmpty || eventText.isEmpty) {
+      if (eventText.isEmpty) {
+        if (kDebugMode) {
+          debugPrint(
+            '[LiteRtExtractionProvider] missing event '
+            'person="$personMentioned" event="$eventText"',
+          );
+        }
+        return null;
+      }
+
+      if (!pendingPersonBind && personMentioned.isEmpty) {
         if (kDebugMode) {
           debugPrint(
             '[LiteRtExtractionProvider] missing person/event '
@@ -269,12 +311,14 @@ class LiteRtExtractionProvider implements ExtractionProvider {
       }
 
       // Hallucination guards — quote and optional date must be in the note.
+      // Empty/pronoun person may be filled by bindPronounPersonMentions.
       final rejection = literalExtractionRejectionReason(
         sourceText,
         personMentioned: personMentioned,
         eventText: eventText,
         quoteEvidence: quoteEvidence,
         dateValueRaw: dateValueRaw,
+        requirePersonMentioned: !pendingPersonBind,
       );
       final quoteOk =
           textAppearsVerbatimInSource(sourceText, quoteEvidence);

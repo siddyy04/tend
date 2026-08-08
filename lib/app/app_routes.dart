@@ -23,6 +23,9 @@ abstract final class AppRoutes {
 
   static String personProfile(String personUuid) => '/profile/$personUuid';
 
+  static String personSearch(String personUuid) =>
+      '/profile/$personUuid/search';
+
   static String memoryNew(String personUuid) =>
       '/profile/$personUuid/memory/new';
 

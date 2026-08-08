@@ -142,24 +142,21 @@ Accidental deletes currently require a future restore feature.
 
 ### AI Quality — Improve extraction completeness for pronouns and compound sentences
 **Problem**
-Multi-memory extraction under-extracts when later sentences use pronouns, or when multiple facts share one sentence. Manual test:
+Multi-memory extraction under-extracts when later sentences use pronouns, or when multiple facts share one sentence. Manual tests:
 
 > Mom had spinal surgery. She started physiotherapy and is recovering well.
 
-Expected three memories (surgery, physiotherapy, recovering well). Actual: only the first memory when later clauses use “She” / “and”. Earlier same-person benchmarks passed when each sentence repeated the name (“Mom … Mom …”), so this is prompt/completeness quality, not protocol design (ADR-012).
+> Met Rahul yesterday. He got selected by OpenAI.
+
+**Status (2026-08-08) — Capture Quality fix shipped**
+- Device trace (`pronoun_rahul_trace_main.dart`): **ONE_FUNCTION_CALL** pre-fix (merged OpenAI fact; meeting dropped; `personMentioned=Rahul` already).
+- **Prompt:** minimal completeness + Rahul example; `personMentioned` must be the named person, not the pronoun.
+- **App-layer:** `bindPronounPersonMentions` — bind empty/pronoun only when exactly one distinct prior explicit name; else fail safe. Unresolved pronouns dropped after bind.
+- ADR-012 unchanged. Unit tests: `pronoun_person_binding_test.dart`. Cases C6–C9 added to completeness suite.
+- Remaining risk: model may still emit one merged FC (prompt quality); binder cannot invent a missing FunctionCall.
 
 **Sprint / area**
-AI Quality (post–Sprint 2B prompt refinement; does **not** block Sprint 2B.3+)
-
-**Proposed solution (prompt only)**
-- Treat every independently useful fact as a separate memory.
-- Do not skip memories merely because later sentences use pronouns (he, she, they, him, her, etc.) instead of repeating the name.
-- Split multiple independent facts in one sentence joined by “and” / “also” / “but” into separate memories where appropriate.
-- Continue avoiding duplicated or merged memories.
-- **Preserve architecture:** one native FunctionCall = one memory; parallel FunctionCall protocol; no `candidates[]` primary protocol (ADR-012).
-
-**Regression suite**
-See `EXTRACTION_COMPLETENESS_BENCHMARK.md` (and `lib/debug/extraction_completeness_cases.dart`). Re-run whenever extraction prompts are refined.
+Capture Quality (done as bugfix; does not expand Sprint 3). Re-check C1–C9 on device when convenient.
 
 ---
 
@@ -678,8 +675,18 @@ Resolve the schema before implementing FollowUps or delete cascades.
 Deferred from Sprint 1B:
 
 - Memory category filters
-- Search within a person's memories
+- ~~Search within a person's memories~~ → **Done in Sprint 3.1** (person-scoped Search)
 - Upcoming / Recent memories section
+
+### Search polish (deferred from Phase 3.1)
+**Priority:** Medium
+
+- Sort-mode toggle (“Most Relevant” / “Newest”) — intentionally excluded from 3.1
+- Results grouped by person — revisit only if query log shows clustering need (`SPRINT3.md`)
+- Scroll-to / highlight specific `memoryUuid` on Person Profile after tapping a search hit
+- **Search UX:** highlight matched query terms within result snippets so users can see why a memory matched (UI polish only; not Phase 3.1)
+- Advanced Unicode / diacritic folding beyond casefold + trim
+- Isar `contains` prefilter if keyword scan latency exceeds ~300ms at larger corpora
 
 ### Activity log
 Maintain a timeline of actions such as:

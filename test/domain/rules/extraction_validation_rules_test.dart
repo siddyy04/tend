@@ -41,6 +41,14 @@ void main() {
     expect(passesLiteralExtractionGuards(c, note), isFalse);
   });
 
+  test('accepts quote when only whitespace/newline differs', () {
+    const source = 'Met Rahul yesterday.\nHe got selected by OpenAI.';
+    final c = _cand(
+      quote: 'Met Rahul yesterday. He got selected by OpenAI.',
+    );
+    expect(quoteAppearsVerbatimInSource(c, source), isTrue);
+  });
+
   test('rejects invented date phrase', () {
     final c = _cand(quote: 'Pooja likes tea.', dateRaw: 'last weekend');
     expect(datePhraseGroundedInSource(c, note), isFalse);

@@ -22,10 +22,12 @@ Machine-readable twin: `lib/debug/extraction_completeness_cases.dart`.
 Encourage the model to:
 
 1. Treat every independently useful fact as a separate memory.
-2. Not skip memories merely because later sentences use pronouns instead of repeating the person’s name.
+2. Not skip memories merely because later sentences use pronouns instead of repeating the person’s name; set `personMentioned` to the named person (never the pronoun).
 3. Split multiple independent facts within the same sentence into separate memories where appropriate.
 4. Continue avoiding duplicated or merged memories.
 5. If the note lacks an explicit stable memory/relationship fact, emit **zero** function calls — never invent to satisfy the tool.
+
+**App-layer complement (deterministic, not NLP):** after mapping FunctionCalls in a single note, `bindPronounPersonMentions` rewrites empty/pronoun `personMentioned` to the sole prior explicit name when exactly one distinct person has appeared so far; otherwise leaves unchanged (fail safe).
 
 ---
 
@@ -102,6 +104,58 @@ Only the first memory extracted.
 
 ---
 
+### C6 — Rahul / OpenAI pronoun QA repro
+
+**Note**
+
+> Met Rahul yesterday.  
+> He got selected by OpenAI.
+
+**Expected memories (2)**
+
+1. Met Rahul yesterday (`dateValueRaw` includes `yesterday`)  
+2. Rahul got selected by OpenAI (`personMentioned=Rahul`, not `He`)
+
+**Observed (2026-08-08, pre-fix device trace)**  
+`ONE_FUNCTION_CALL`: merged into a single career memory (`personMentioned=Rahul`, quote=`He got selected by OpenAI`, `dateValueRaw=yesterday`) — meeting fact dropped.
+
+**Fix**  
+Minimal prompt completeness line + example; app-layer `bindPronounPersonMentions` for empty/pronoun `personMentioned` when a sole prior explicit name exists.
+
+---
+
+### C7 — Ambiguous pronoun (fail safe)
+
+**Note**
+
+> Rahul joined OpenAI. Priya moved to Berlin. He loves tea.
+
+**Expected**  
+At least the two explicit-name facts (Rahul, Priya). A third call with `He` must **not** be auto-bound by the app when two distinct people already appeared — leave unresolved / drop (fail safe). Ideal model behavior: omit the ambiguous third call or ask via confirmation later; do not invent.
+
+---
+
+### C8 — Multiple people, explicit names
+
+**Note**
+
+> Rahul likes tea. Priya plays cricket.
+
+**Expected memories (2)** — Rahul / Priya respectively; no pronoun binding.
+
+---
+
+### C9 — Mixed family + ambiguous He
+
+**Note**
+
+> Dad retired last month. Mom started physiotherapy. He walks every morning.
+
+**Expected**  
+At least Dad + Mom facts. `He walks…` must not be bound by the app after two distinct names (fail safe). Prefer model sets `personMentioned=Dad` if it emits a third call.
+
+---
+
 ## Insufficient information (zero memories)
 
 Notes that are only a name, lone word, or otherwise lack an explicit stable memory/relationship fact must produce **no** native function calls and **no** candidates. Hallucinated `eventText` / `quoteEvidence` is a fail even if later rejected by grounding.
@@ -163,4 +217,5 @@ Case **PASS** only if all applicable checks pass. Suite **PASS** only if every c
 - Backlog: **AI Quality — Improve extraction completeness for pronouns and compound sentences**
 - Backlog: **Capture UX — clearer empty-extraction message for insufficient notes**
 - ADR-012 — Parallel native function calls for multi-memory extraction
-- Spikes: `lib/debug/same_person_multi_memory_spike_main.dart`, `mom_completeness_spike_main.dart` (name-repeated baselines; this suite covers pronoun/compound/insufficient gaps)
+- Spikes: `lib/debug/same_person_multi_memory_spike_main.dart`, `mom_completeness_spike_main.dart`, `pronoun_rahul_trace_main.dart`
+- Unit tests: `test/domain/rules/pronoun_person_binding_test.dart`
