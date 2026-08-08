@@ -3,7 +3,7 @@
 **Supersedes:** `03-development-roadmap.md`. Aligned to `ARCHITECTURE.md` (ADR-0001).
 **How to use this with Cursor:** work through this sprint by sprint — copy only that sprint's section into a Cursor prompt (e.g. *"Implement Sprint 1A exactly as scoped below, using SCHEMA.md and FEATURES.md as the source of truth"* — or Sprint 1B / Sprint 2 as appropriate). Each sprint is independently shippable and testable before moving to the next.
 
-**Stack (per ADR-0001):** Flutter, `isar_community` (local source of truth), `flutter_riverpod` + `riverpod_generator`, `go_router`, `flutter_gemma` (behind the `ai/providers/` abstraction), `supabase_flutter` (auth + optional backup), `workmanager` (background sync + Suggestion Engine). Repo organized feature-first per `ARCHITECTURE.md` Section 2.
+**Stack (per ADR-0001 / ADR-011 / ADR-013):** Flutter, `isar_community` (local source of truth), `flutter_riverpod` + `riverpod_generator`, `go_router`, `flutter_gemma` + `flutter_gemma_litertlm` (Gemma 4 extraction via `LiteRtInferenceAdapter` only), `flutter_gemma_embeddings` (Gecko embeddings via `GeckoInferenceAdapter` only), `supabase_flutter` (auth + optional backup), `workmanager` (background sync + Suggestion Engine). Repo organized feature-first per `ARCHITECTURE.md` Section 2. Collection fields: **`SCHEMA.md` only**.
 
 **What changed from the original roadmap:** the core sprint order is preserved almost exactly, per your instruction — but **sync is now its own dedicated sprint (Sprint 5)** rather than a "harden the offline queue" line item folded into polish. Local-first sync with conflict resolution is genuinely new engineering scope the original cloud-primary design never had, and it deserves its own scoped, testable unit rather than being squeezed in at the end. **Sprint 1 is also split into Sprint 1A (Person CRUD) and Sprint 1B (manual Memory CRUD + Person Profile)** so each is independently shippable while preserving the original "validate schema before AI" intent. Everything else — dependency logic, what ships when — is unchanged in spirit.
 
@@ -40,16 +40,22 @@
 
 ## Sprint 2 — On-Device Capture + AI Extraction
 **Goal:** the actual core loop — capture in under 10 seconds, entirely on-device, user confirms.
-- Implement the `ExtractionProvider`, `EmbeddingProvider`, `TranscriptionProvider`, `OCRProvider` abstract interfaces (`ARCHITECTURE.md` Section 6) before writing any concrete implementation — this is what keeps the app decoupled from Gemma specifically.
+
+> **Supersession (executed path):** Concrete extraction is `LiteRtExtractionProvider` + **Gemma 4 E2B** (ADR-010/011). Embeddings are **not** built in Sprint 2 — Phase 3.3 ships `GeckoEmbeddingProvider` via `flutter_gemma_embeddings` (ADR-013). Historical “GemmaExtractionProvider / GemmaEmbeddingProvider via flutter_gemma” wording below is obsolete for the production stack.
+
+- Implement the `ExtractionProvider`, `EmbeddingProvider`, `TranscriptionProvider`, `OCRProvider` abstract interfaces (`ARCHITECTURE.md` Section 6) before writing any concrete implementation — this is what keeps the app decoupled from a specific vendor model.
 - **Model management first:** device capability check (`device_info_plus`), tiered behavior, on-demand model download flow with checksum verification, and the `ManualFallbackProvider` for unsupported devices — build this *before* the extraction UI, so every subsequent screen can assume graceful degradation exists rather than bolting it on after.
-- Implement `GemmaExtractionProvider` and `GemmaEmbeddingProvider` using `flutter_gemma`'s function-calling mode against the Deliverable 5 JSON schema.
-- Implement `PlatformTranscriptionProvider` (native speech-to-text) and `PlatformOCRProvider` (native on-device text recognition) — these do not touch `flutter_gemma` at all.
+- Implement concrete extraction behind the LiteRT adapter (catalog-selected Gemma 4); do **not** route embeddings through the LLM package — see ADR-013 / Sprint 3 for Gecko.
+- Implement `PlatformTranscriptionProvider` (native speech-to-text) and `PlatformOCRProvider` (native on-device text recognition) — these do not touch `flutter_gemma` / `flutter_gemma_embeddings` at all.
 - Global capture modal: voice (default), text, photo, OS share-sheet entry points.
 - Confirmation card: editable fields, respects `needsUserConfirmation` and the confidence thresholds — never auto-saves below threshold.
 - **Done when:** a user can go from opening the app to a saved, AI-structured memory in under 10 seconds including the confirmation tap — for both voice and text, entirely offline — and a user on a simulated low-RAM device instead lands cleanly in manual-entry mode with no crash or dead end.
 
 ## Sprint 3 — Today's Opportunities (Suggestion Engine v1)
 **Goal:** the resurfacing half of the magic loop, computed entirely locally.
+
+> **Supersession (executed path):** Product Sprint **3** delivered **Search** (Phases 3.1–3.4). Suggestion Engine is the **next** planning target (product Sprint 4). Keep the bullets below as Suggestion Engine scope when that sprint is specified — do not treat this section’s number as the live sequence.
+
 - Implement the rule-based scoring logic (unchanged from the original design) as a `workmanager` scheduled background task querying Isar directly — no cloud job, no network dependency.
 - Today's Opportunities screen: hard cap of 5, each item shows its "why this surfaced" line, act/dismiss/not-now actions writing to `SuggestionLogEntry`.
 - Local push notifications for the daily digest (`flutter_local_notifications`).
@@ -58,10 +64,12 @@
 
 ## Sprint 4 — Local Semantic Search
 **Goal:** on-demand recall, computed entirely on-device.
-- Extend the Sprint 2 extraction flow to generate and store an embedding on every memory at capture time.
-- Person-scoped and global natural-language search UI, using the brute-force cosine scan from `SCHEMA.md`.
-- Answers must cite the specific memory they're drawn from — never a synthesized answer with no traceable source.
-- **Done when:** a plain-language question like "what did Rahul say about buying a house?" returns a correct, sourced answer with the device offline.
+
+> **Supersession:** In the executed roadmap, **Search shipped as Sprint 3** (Phases 3.1–3.4: keyword + optional Gecko Tier 2). This section’s original numbering is historical. Sprint 4 planning going forward targets the **Suggestion Engine** (see `CURSOR_HANDOFF.md` / `SPRINT3.md`). Do not re-implement Search here.
+
+- *(Historical intent)* Embeddings + person-scoped/global NL search via brute-force cosine — **done in Sprint 3.3** with async post-persist embed, `embeddingModelVersion`, mutex + `releaseResident()`.
+- **Done when (Search):** plain-language recall with sourced memories offline — **met for v0.5.0**.
+
 
 ## Sprint 5 — Sync Engine *(new — see "what changed" above)*
 **Goal:** opt-in backup/multi-device sync, without ever becoming a dependency for core function.

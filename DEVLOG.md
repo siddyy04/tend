@@ -262,3 +262,10 @@
 - Threshold 0.70; docs: `SPRINT3_3_QA.md`
 - **Ready for single git commit + `v0.5.0` tag** before Sprint 4 planning
 
+## Pre–Sprint 4 — Documentation sync (architecture review)
+
+- `SCHEMA.md` sole collection SoT; `ARCHITECTURE.md` no longer duplicates field lists
+- Device-tier / RAM sections updated from Phase 3.3/3.4 QA (Gemma 4 + Gecko; `releaseResident` + mutex)
+- Living docs (`FEATURES.md`, `CURSOR_HANDOFF.md`, `DEVELOPMENT_ROADMAP.md` stack notes) aligned to production stack; `flutter_gemma_embeddings` documented
+- Frozen historical sprint specs (`SPRINT2A.md`, ADR-010 title) left as-is with existing supersession notes
+

@@ -3,6 +3,8 @@
 **Supersedes:** `02-database-schema.md`. Aligned to `ARCHITECTURE.md` (ADR-0001).
 **How to use this with Cursor:** paste this whole file into the repo as `SCHEMA.md`. Tell Cursor: *"Isar is the source of truth. Generate Dart collections exactly matching SCHEMA.md — do not invent additional fields. The Supabase schema is a backup mirror only, never queried directly by the app for normal reads/writes."*
 
+**Single source of truth for collections:** This file owns all Isar collection field definitions. `ARCHITECTURE.md` must reference this document — it must not restate field lists (avoids schema drift).
+
 ---
 
 ## Primary schema: Isar collections

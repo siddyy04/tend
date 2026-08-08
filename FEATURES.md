@@ -24,7 +24,7 @@
 | Capability | P0 scope | Deferred to |
 |---|---|---|
 | Person CRUD | Full, against Isar (source of truth) | — |
-| Memory capture: voice + text | Full, with **on-device** AI extraction via the `ExtractionProvider` abstraction (Gemma 3n E2B initial implementation) | — |
+| Memory capture: voice + text | Full, with **on-device** AI extraction via the `ExtractionProvider` abstraction (**Gemma 4 E2B** via LiteRT-LM; optional E4B) | — |
 | Memory capture: photo | Platform-native on-device OCR (ML Kit / Vision) on screenshots — **not routed through the LLM** | Vision captioning of scene photos via the LLM → P1 |
 | Voice transcription | Platform-native speech-to-text — **not routed through the LLM** | — |
 | Confidence-gated confirmation | Full — low `extractionConfidence` or `personMatchConfidence` routes to manual confirm | — |
@@ -69,9 +69,9 @@ Social feed · Messaging · Calling · AI companion/therapy · Journaling · Rel
 ## Suggested build order within P0
 1. Auth + My Circle + Person CRUD against Isar (Sprint 1A — validates Person schema and navigation)
 2. Manual memory entry + Person Profile timeline (Sprint 1B — validates the Memory data model end to end)
-3. On-device capture: platform ASR/OCR + Gemma 3n extraction (via provider abstraction) + confirmation card + model download/device-tiering flow
-4. Today's Opportunities (local rule-based engine)
-5. Local semantic search
+3. On-device capture: platform ASR/OCR + Gemma 4 E2B extraction (via LiteRT provider abstraction) + confirmation card + model download/device-tiering flow
+4. Local search: keyword Tier 1 + optional Gecko semantic Tier 2 (Sprint 3 Phases 3.1–3.4 — shipped)
+5. Today's Opportunities (local rule-based Suggestion Engine — Sprint 4)
 6. Sync engine (push/pull/conflict resolution/tombstones) — new, dedicated step per the ADR, not a late-stage polish item
 7. Data export/delete, encryption, empty states, onboarding polish
 

@@ -483,12 +483,13 @@ FEATURES Person Profile lists upcoming/recent, category filter, and search entry
 ---
 
 ### FollowUp.deletedAt schema alignment
+**Status:** Resolved — see “FollowUp schema review” below (Foundation Cleanup). `SCHEMA.md` is the sole collection SoT; `ARCHITECTURE.md` no longer duplicates field lists.
+
 **Problem**
-`ARCHITECTURE.md` collection sketch includes `deletedAt` on FollowUp; `SCHEMA.md` FollowUp does not.
+*(Historical)* Architecture notes and schema disagreed on `FollowUp.deletedAt`.
 
 **Proposed solution**
-- Pick one contract before Sprint 3 (Suggestion Engine) or cascade-delete work touches FollowUps.
-- Prefer updating SCHEMA + Isar collection together if tombstones are required.
+- ~~Pick one contract before Sprint 3…~~ Done — `deletedAt` lives in `SCHEMA.md` + Isar.
 
 ---
 

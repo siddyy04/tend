@@ -24,6 +24,7 @@ This project follows a simple chronological changelog.
 - Keyword search (Tier 1) unchanged; Tier 2 threshold calibrated to **0.70**
 - Phase 3.4 QA: all M1–M12 + mutex soak **PASS** on AIN065 release — see `SPRINT3_3_QA.md`
 - Architecture unchanged: tiered hybrid, async queue, mutex, foreground-only backfill
+- Docs sync (pre–Sprint 4): `SCHEMA.md` sole collection SoT; device-tier numbers from QA; `flutter_gemma_embeddings` + `releaseResident()` captured in `ARCHITECTURE.md`
 
 ---
 

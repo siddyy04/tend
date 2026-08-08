@@ -10,7 +10,7 @@
 
 ## 0. Summary of the decision
 
-Isar (via `isar_community`) is the single source of truth on-device. All AI (extraction, embeddings) runs locally through a swappable provider interface, backed by a **LiteRT-LM** runtime with the active model selected via `ModelCatalog` (MVP: Gemma 4 E2B; optional E4B — see ADR-011). Supabase is demoted to authentication + optional, opt-in, encrypted backup/sync — never a dependency for core app function. No OpenAI, no pgvector, no server-side inference for MVP.
+Isar (via `isar_community`) is the single source of truth on-device. Extraction runs on-device via LiteRT-LM + catalog-selected weights (MVP: Gemma 4 E2B; optional E4B — ADR-011). Embeddings run via a dedicated Gecko provider (`flutter_gemma_embeddings` — ADR-013). Both sit behind swappable provider interfaces. Supabase is demoted to authentication + optional, opt-in, encrypted backup/sync — never a dependency for core app function. No OpenAI, no pgvector, no server-side inference for MVP.
 
 | Layer | Choice | Role |
 |---|---|---|
@@ -36,8 +36,14 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 │                                │      (Extraction / Embedding /     │
 │                                │       Transcription / OCR)         │
 │                                │        │                           │
-│                                │        └──> LiteRT LLM (on-device, │
-│                                │             flutter_gemma bridge)  │
+│                                │        ├──> LiteRT-LM + Gemma 4    │
+│                                │        │    (extraction;           │
+│                                │        │     flutter_gemma +       │
+│                                │        │     flutter_gemma_litertlm)│
+│                                │        └──> Gecko embedder         │
+│                                │             (flutter_gemma_        │
+│                                │              embeddings; parallel  │
+│                                │              vendor boundary)      │
 │                                │                                    │
 │                                └──> Sync Engine (background)        │
 │                                       │                             │
@@ -57,7 +63,7 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 3. Text goes to the local `ExtractionProvider` (LiteRT model via function calling).
 4. Extraction result (matching the Deliverable 5 JSON schema exactly) is validated: confidence thresholds, grounding-quote check, taxonomy check — all unchanged from the original design.
 5. Result written to a Riverpod state → confirmation card renders → user confirms/edits.
-6. On confirm: write to Isar (`memories` collection), `syncStatus = pending`, `updatedAt = now()`.
+6. On confirm: write to Isar (`memories` collection), `syncStatus = pending`, `updatedAt = now()`. Embedding generation (if Gecko is ready) is **enqueued asynchronously after** this write — never on the save critical path (Phase 3.3).
 7. Isar write triggers a watcher → UI updates immediately (no network round-trip in the critical path — this is the entire point of local-first).
 8. If sync is enabled and connectivity exists, a background task later pushes the pending record to Supabase. If not, nothing blocks the user; the record is fully functional locally.
 
@@ -102,13 +108,29 @@ lib/
       ocr_provider.dart            # abstract interface
       litert/
         litert_extraction_provider.dart  # concrete LiteRT extraction (catalog model)
-        litert_inference_adapter.dart    # sole flutter_gemma import
+        litert_inference_adapter.dart    # sole flutter_gemma import (LLM)
         litert_prompt_builder.dart
+      gecko/
+        gecko_embedding_provider.dart    # concrete EmbeddingProvider (Gecko)
+        gecko_inference_adapter.dart     # sole flutter_gemma_embeddings import
+        gecko_constants.dart
+      embedding/
+        embedding_queue_controller.dart  # post-persist async embed queue
+        embedding_backfill_controller.dart
+        noop_embedding_provider.dart
+      search/
+        keyword_search_provider.dart
+        semantic_search_provider.dart
+        hybrid_result_composer.dart
       manual/
         manual_fallback_provider.dart    # no-AI fallback for unsupported devices
+    inference/
+      ai_inference_mutex.dart          # shared extraction > embedding mutex
     model_manager/
-      model_catalog.dart           # active model + displayName / install kinds
-      model_download_manager.dart  # download, verify, version check
+      model_catalog.dart               # Gemma extraction artifacts
+      embedding_model_catalog.dart     # Gecko embedding artifacts
+      model_download_manager.dart
+      embedding_model_manager.dart
       device_capability_check.dart
   features/
     circle/                    # My Circle screen
@@ -120,7 +142,7 @@ lib/
   main.dart
 ```
 
-**Rule for Cursor:** nothing outside `ai/providers/litert/litert_inference_adapter.dart` may import `flutter_gemma`. Nothing outside `data/local/isar/` and `domain/repositories/` may import Isar directly. This is what makes Section 6's provider swap and any future database swap actually possible instead of theoretical.
+**Rule for Cursor:** nothing outside `ai/providers/litert/litert_inference_adapter.dart` may import `flutter_gemma` / `flutter_gemma_litertlm` for the LLM path (plus a process bootstrap hook). Nothing outside `ai/providers/gecko/gecko_inference_adapter.dart` may import `flutter_gemma_embeddings`. Nothing outside `data/local/isar/` and `domain/repositories/` may import Isar directly. Collection field definitions live only in **`SCHEMA.md`** — do not duplicate them here.
 
 ---
 
@@ -139,100 +161,13 @@ lib/
 ### ⚠️ Maintenance note (read before `pub add`)
 Official `isar` development has slowed significantly. **Depend on `isar_community`** (the actively-maintained community fork — same API, drop-in) rather than the original `isar` package. `isar_plus` is a second, smaller fork with similar goals if `isar_community` ever stalls too — worth a five-minute comparison at implementation time, not a blocker now. If sync ends up being more painful to hand-roll than expected (Section 5), ObjectBox is the credible alternative to revisit — it has native sync support, which is the one thing Isar doesn't give you for free. Not switching now; flagging it so it isn't rediscovered the hard way in six months.
 
-### Collections (mirrors the Deliverable 4 ontology, with sync fields added to every collection)
+### Collections — single source of truth
 
-```dart
-@collection
-class Person {
-  Id id = Isar.autoIncrement;         // local-only fast key, never synced directly
-  @Index(unique: true)
-  late String uuid;                   // stable cross-device identity (client-generated v4 uuid)
-  late String name;
-  @enumerated
-  late CircleTier circleTier;
-  String? relationshipType;
-  late DateTime createdAt;
-  late DateTime updatedAt;            // sync: last local modification
-  @enumerated
-  late SyncStatus syncStatus;         // pending | synced | conflict
-  DateTime? deletedAt;                // tombstone — null means not deleted
-}
+**Do not define or copy Isar collection field lists in this file.** The authoritative collection definitions (Person, Memory, FollowUp, SuggestionLogEntry, Connection), enums, indexes, FK patterns, embedding versioning, and Postgres backup-mirror notes live in **[`SCHEMA.md`](SCHEMA.md)**.
 
-@collection
-class Memory {
-  Id id = Isar.autoIncrement;
-  @Index(unique: true)
-  late String uuid;
-  @Index()
-  late String personUuid;             // FK by stable uuid, not local Isar id
-  @enumerated
-  late MemoryCategory category;
-  late String eventText;
-  String? quoteEvidence;
-  @enumerated
-  late DatePrecision datePrecision;
-  String? dateValueRaw;
-  DateTime? dateValue;
-  late int importanceScore;           // 1-5
-  double? extractionConfidence;       // null if manually entered
-  double? personMatchConfidence;
-  @enumerated
-  late SensitivityLevel sensitivityFlag;
-  @enumerated
-  late SourceType sourceType;
-  String? sourceRef;                  // local file path, not a cloud URL
-  late bool needsUserConfirmation;
-  List<double>? embedding;            // local semantic search vector — see Section 8
-  late DateTime createdAt;
-  late DateTime updatedAt;
-  @enumerated
-  late SyncStatus syncStatus;
-  DateTime? deletedAt;
-}
+Implementation must generate Dart `@collection` classes to match `SCHEMA.md` exactly. If architecture text and `SCHEMA.md` ever disagree on a field, **`SCHEMA.md` wins** — update this document’s narrative, do not invent a second schema.
 
-@collection
-class FollowUp {
-  Id id = Isar.autoIncrement;
-  @Index(unique: true)
-  late String uuid;
-  @Index()
-  late String memoryUuid;
-  String? note;
-  DateTime? expectedDate;
-  @enumerated
-  late FollowUpStatus status;         // open | done | dismissed
-  DateTime? resolvedAt;
-  late DateTime createdAt;
-  late DateTime updatedAt;
-  @enumerated
-  late SyncStatus syncStatus;
-  DateTime? deletedAt;
-}
-
-@collection
-class SuggestionLogEntry {
-  Id id = Isar.autoIncrement;
-  @Index(unique: true)
-  late String uuid;
-  @Index()
-  late String followUpUuid;
-  late DateTime surfacedAt;
-  String? reasonShown;
-  String? actionTaken;                // 'acted' | 'dismissed' | 'not_now'
-  String? userFeedback;
-  late DateTime updatedAt;
-  @enumerated
-  late SyncStatus syncStatus;
-}
-// Connection / connection_memories / connection_people: same pattern, deferred to P1
-// per FEATURES.md — schema stub only, not implemented in MVP.
-```
-
-### Why a `uuid` field alongside Isar's own `Id`
-Isar's `autoIncrement` id is a fast local integer, but it is **not safe to sync** — two devices will independently generate colliding integers. Every syncable collection carries its own client-generated UUID as the stable identity used for foreign keys, sync, and the Supabase mirror. Isar's own `id` never leaves the device.
-
-### Why every collection carries `updatedAt` / `syncStatus` / `deletedAt` from day one
-Even though the sync engine (Section 5) isn't built until later in the roadmap, retrofitting these fields onto existing local data after the fact is the kind of migration worth avoiding entirely. Cheap to include now, expensive to add later.
+Sync-oriented fields (`uuid`, `updatedAt`, `syncStatus`, `deletedAt`) are intentional in `SCHEMA.md` from day one so later sync (Section 5) does not require a painful retrofit. Isar’s local `Id` never leaves the device; foreign keys use client-generated `uuid` strings (see `SCHEMA.md` “Why uuid FKs, not IsarLinks”).
 
 ---
 
@@ -288,11 +223,20 @@ abstract class OCRProvider {
 ```
 
 Concrete implementations live behind these interfaces:
-- `LiteRtExtractionProvider` — on-device LiteRT-LM via `flutter_gemma`, using **function-calling mode** to enforce the Deliverable 5 JSON schema. Which weights run is decided by `ModelCatalog` (MVP: Gemma 4 E2B), not by Capture/Confirmation.
+- `LiteRtExtractionProvider` — on-device LiteRT-LM via `flutter_gemma` + `flutter_gemma_litertlm`, using **native function-calling** to enforce the extraction schema. Which weights run is decided by `ModelCatalog` (MVP: **Gemma 4 E2B**; optional E4B), not by Capture/Confirmation.
+- `GeckoEmbeddingProvider` — on-device **Gecko-110m-en** (768-d) via `flutter_gemma_embeddings` / `GeckoInferenceAdapter`. Optional download (~114 MB); when unavailable, resolve `NoOpEmbeddingProvider` and keep keyword Search only.
 - `PlatformTranscriptionProvider` — **Sprint 2B.4 MVP** wraps iOS Speech / Android `SpeechRecognizer` via `speech_to_text`, **not the LLM**. Selected through `activeTranscriptionProvider`. Acceptable for short notes; **not** the long-term conversational / multi-minute transcription solution (see product backlog evaluation). Future long-form engines (Whisper, cloud STT, etc.) must implement the same `TranscriptionProvider` interface so Capture → Extraction → Confirmation stay unchanged.
 - `PlatformOCRProvider` — **Sprint 2B.5 MVP** wraps Google ML Kit text recognition via `google_mlkit_text_recognition`, **not the LLM**. Selected through `activeOCRProvider`. Screenshots / text-bearing photos only; scene captioning remains P1. Future OCR engines implement the same `OCRProvider` interface so Capture → Extraction → Confirmation stay unchanged.
 - `ShareIntentHandler` / `PlatformShareIntentHandler` — **Sprint 2B.6 MVP** converts Android share-sheet text/URLs (`receive_sharing_intent`) into editable Capture text only. No AI logic in the share path; Continue uses the same `CaptureSubmitFlow` as Typed / Voice / OCR with `SourceType.share`.
-- `ManualFallbackProvider` — a null-object implementation for devices that can't run a local model (Section 7): `extract()` returns "needs manual entry" instead of throwing, `embed()` returns null and search silently degrades to keyword-only. The app must never crash or block capture because the model isn't available — it should just quietly become the pre-AI version of itself.
+- `ManualFallbackProvider` — a null-object implementation for devices that can't run a local extraction model (Section 7): `extract()` returns “needs manual entry” instead of throwing. Semantic search silently degrades to keyword-only when Gecko is declined/missing. The app must never crash or block capture because a model isn't available — it should just quietly become the pre-AI (or keyword-only) version of itself.
+
+### Shared on-device inference coordination (Phase 3.3 / 3.4)
+
+Gemma-4 extraction and Gecko embedding are **separate** native workloads. They must not run concurrently:
+
+1. **`AiInferenceMutex`** — app-wide lock; **extraction priority** over embedding (per-capture embed, backfill, and search-time query embed wait).
+2. **`GeckoInferenceAdapter.releaseResident()`** — closes the resident embedder worker and drops the in-memory handle **immediately before** Gemma extraction (wired as `beforeInference` on `LiteRtExtractionProvider`, inside the extraction lock). Catalog files and readiness prefs are untouched; the next embed/search reloads via `prepare()` / `getActiveEmbedder()`.
+3. **Rationale (M7):** with Gecko co-resident, warm extract averaged ~8.6 s on AIN065 (failed the ≤8 s release gate). After `releaseResident()`, warm extract averaged **~7.2 s** with the same gate. This is resource management, not a ranking/architecture change — see `SPRINT3_3_QA.md`.
 
 ### Why ASR, OCR, and Share stay outside the LLM (and why the ASR *implementation* is swappable)
 Gemma *can* take audio and image input directly, but routing every voice note or screenshot through the full multimodal model is the heavier, slower, more battery-costly path for jobs that purpose-built ASR/OCR stacks can do. Reserve the LLM for structured reasoning over **text**. Platform STT is the MVP transcription backend; Tend’s product goal includes **long-form conversational voice**, so the transcription *provider* is intentionally abstracted and can be upgraded after a structured evaluation without touching Capture, Extraction, or Confirmation. Speech language preference (Settings) is provider-agnostic and should travel with any future engine. Share ingress similarly only produces editable text — never images, PDFs, or HTML markup for the model.
@@ -309,23 +253,35 @@ Gemma *can* take audio and image input directly, but routing every voice note or
 - Verify the downloaded model against a checksum before use; if verification fails, fall back to the previously working model rather than a corrupt one.
 
 **Unsupported / low-memory devices — the real risk to design for, not an edge case:**
-- Gemma 3n E2B needs roughly 3GB of RAM just for the model. On a 6GB device, the model and the camera can't both be resident — the OS will kill something.
-- At first launch, run a `device_info_plus`-based capability check (available RAM, OS version) **before** offering the model download.
-- **Tiered behavior, not a hard cutoff:**
-  - **≥8GB RAM:** full experience — Gemma 3n E2B, multimodal-capable, all AI features on.
-  - **~6GB RAM:** Gemma 3n E2B works, but disable simultaneous camera+model use in the UI (defer image capture to gallery-picker style flows rather than live camera during an active model session).
-  - **Below a defined floor (device can't comfortably run any local model):** ship with `ManualFallbackProvider` — capture, editing, Today's Opportunities, and the rest of the product work exactly as designed, just without AI-assisted extraction or semantic search. The product's core value doesn't require AI to function, only to be effortless — this is a genuinely acceptable degraded mode, not a broken one.
+
+Measured on reference device **AIN065** (Phase 3.3/3.4 QA — see `SPRINT3_3_QA.md`):
+
+| Workload | Observed footprint / latency |
+|---|---|
+| Gecko embedder load (debug probe) | **~+250 MB** VmRSS delta |
+| Gecko warm embed | ~172 ms (release spike) / ~293 ms (debug) |
+| Gemma 4 E2B download | **~2.4 GB** on disk |
+| Gemma + Gecko co-resident (soak, before release discipline) | **~1.35 GB** VmRSS; warm extract **~8.6 s** (failed ≤8 s gate) |
+| After `releaseResident()` before extract | warm extract **~7.2 s** (PASS ≤8 s); soak RSS ~1.21 GB |
+
+At first launch, run a `device_info_plus`-based capability check (available RAM, OS version) **before** offering the primary model download.
+
+**Tiered behavior, not a hard cutoff** (floors informed by Gemma 4 E2B ~2.4 GB download + multi-GB runtime, plus optional Gecko ~114 MB / ~250 MB RSS):
+
+- **≥8GB RAM:** full experience — Gemma 4 E2B extraction, optional Gecko Tier 2 search, all AI features on. Still **serialize** extraction vs embedding (`AiInferenceMutex`) and **release** the Gecko worker before extraction (`releaseResident()`).
+- **~6GB RAM:** Gemma 4 E2B may run, but treat concurrent camera+model and concurrent Gemma+Gecko residency as unsafe — prefer gallery-style photo flows; keep mutex + `releaseResident()` mandatory; consider declining Gecko if capture latency/thermal pressure appears.
+- **Below a defined floor (device can't comfortably run Gemma 4 E2B):** ship with `ManualFallbackProvider` — capture, editing, and the rest of the product work; keyword Search still works; no extraction and no Tier 2 semantic search. Acceptable degraded mode.
+
+**Do not** assume historical “Gemma 3n ~3GB” numbers for new tiering work — use the Phase 3.3/3.4 measurements above and re-measure when changing models.
 
 ### Model recommendation — don't use one model for everything
 
-This is the one place I'd actively push back on "just ship Gemma 3n E2B for every AI task":
-
-- **Extraction (text → structured Memory JSON):** start with **Gemma 3n E2B in zero-shot function-calling mode** for MVP — it works out of the box with no training data required, which matters because you don't have any extraction examples to fine-tune with yet.
-- **Once you have real usage data (post-Concierge-pilot / post-beta):** fine-tune **FunctionGemma (270M)** — a Gemma 3 270M variant purpose-built for function calling — on your own captured extraction examples. Google's own benchmark shows accuracy jumping from 58% zero-shot to 85% after task-specific fine-tuning; it is explicitly *not* meant to be used zero-shot. That fine-tuning requirement is exactly why it isn't the Sprint 2 default — you need real examples first — but once you have them, a fine-tuned 270M specialist is dramatically smaller (a few hundred MB vs. ~3GB), faster, and runs comfortably on lower-RAM devices than a general-purpose Gemma 3n, likely *improving* extraction accuracy on your narrow, well-defined task rather than trading accuracy for size. Treat this as a defined P1 roadmap item, not a someday-maybe: it directly widens your supported-device floor.
-- **Embeddings:** dedicated **Gecko-110m-en** via `flutter_gemma_embeddings` (Phase 3.3 / ADR-013) — not Gemma 4 E2B (no embed API on InferenceModel).
+- **Extraction (text → structured Memory):** production MVP is **Gemma 4 E2B** via LiteRT-LM function calling (`ModelCatalog` / ADR-011). Optional **Gemma 4 E4B** for capable devices.
+- **Once you have real usage data (post-beta):** fine-tune a smaller function-calling specialist (e.g. FunctionGemma-class) on Tend extraction examples — a defined future roadmap item to widen the supported-device floor, not a Sprint 3/4 blocker.
+- **Embeddings:** dedicated **Gecko-110m-en** via `flutter_gemma_embeddings` (Phase 3.3 / ADR-013) — **not** Gemma 4 E2B (no embed API on `InferenceModel`).
 - **ASR/OCR:** platform-native, as covered in Section 6 — never the LLM.
 
-This staged plan is exactly why the provider abstraction in Section 6 exists: swapping the `ExtractionProvider` implementation from Gemma-3n-zero-shot to fine-tuned-FunctionGemma later is a contained change, not a rearchitecture.
+The provider abstraction in Section 6 exists so swapping extraction or embedding implementations remains a contained change, not a rearchitecture.
 
 ---
 
@@ -334,14 +290,14 @@ This staged plan is exactly why the provider abstraction in Section 6 exists: sw
 - Phase 3.1 ships **keyword search** as Tier 1 (always on, offline).
 - Phase 3.3 adds **Gecko-110m-en** embeddings (768-d) via `GeckoEmbeddingProvider` / `GeckoInferenceAdapter` (sole `flutter_gemma_embeddings` import).
 - Embeddings are generated **asynchronously after** Memory persistence (and via foreground batched backfill) — never on the capture save critical path.
-- Persist `embeddingModelVersion` with every vector; stale/null versions are Tier-2-ineligible until re-embedded.
-- Query time: embed the query; brute-force cosine in Dart over valid vectors; apply a tunable absolute threshold; append Tier 2 below Tier 1 (**tiered**, not blended).
-- Gemma-4 extraction and Gecko embedding share an `AiInferenceMutex` (extraction priority).
+- Persist `embeddingModelVersion` with every vector (`SCHEMA.md`); stale/null versions are Tier-2-ineligible until re-embedded.
+- Query time: embed the query; brute-force cosine in Dart over valid vectors; apply a tunable absolute threshold (calibrated **0.70** in Phase 3.4); append Tier 2 below Tier 1 (**tiered**, not blended).
+- **Concurrency / RAM:** `AiInferenceMutex` (extraction > embedding) plus `releaseResident()` before extraction — see Section 6.
 - Gecko download is optional (~114 MB), independent of the Gemma setup gate; decline → keyword-only.
-- At MVP scale, no ANN index. Shared with SCHEMA.md / ADR-013 / `SPRINT3_3.md`.
-- **This is a deliberate simplification, not a compromise.** pgvector's ANN indexing (ivfflat/HNSW) exists to solve a scale problem — millions of vectors — that a single user's personal relationship history will never approach. Realistic per-user scale is hundreds to low thousands of memories; scanning that many short float vectors is on the order of milliseconds on a phone CPU. No index is needed at MVP.
-- **Escape hatch, not needed now:** if a power user's dataset ever grows large enough that the linear scan becomes noticeable, add a keyword pre-filter using Isar's native indexed/full-text query capability to narrow candidates before the vector scan — cheap to add later, not worth building speculatively now.
-- **Worth instrumenting before over-investing further:** structured filtering (by person, category, date range) may cover most real "search" behavior in early usage, with semantic recall needed less often than assumed. Cheap to check with real beta data; expensive to have built a bigger pipeline than the actual usage pattern needed.
+- At MVP scale, no ANN index. Authoritative field notes: `SCHEMA.md`; decisions: ADR-013 / `SPRINT3_3.md`.
+- **This is a deliberate simplification, not a compromise.** pgvector's ANN indexing exists to solve a scale problem a single user's relationship history will not approach soon. Realistic per-user scale is hundreds to low thousands of memories.
+- **Escape hatch, not needed now:** Isar keyword prefilter before the vector scan if linear scan ever becomes noticeable.
+- **Worth instrumenting before over-investing further:** structured filtering (person, category, date) may cover much early “search” behavior; validate with real query-log data.
 
 ---
 
@@ -363,9 +319,10 @@ This staged plan is exactly why the provider abstraction in Section 6 exists: sw
 | `isar_community` | Local database — source of truth |
 | `flutter_riverpod` + `riverpod_generator` | State management, dependency injection, reactive streams |
 | `go_router` | Navigation |
-| `flutter_gemma` + `flutter_gemma_litertlm` | On-device LiteRT-LM inference bridge (extraction, embeddings), via the provider abstraction only |
+| `flutter_gemma` + `flutter_gemma_litertlm` | On-device LiteRT-LM inference bridge (**extraction / Gemma 4**), via `LiteRtInferenceAdapter` only |
+| `flutter_gemma_embeddings` | On-device **Gecko** embedding backend, via `GeckoInferenceAdapter` only (Phase 3.3+) |
 | `supabase_flutter` | Auth + optional backup/sync client |
-| `workmanager` | Background sync engine + daily Suggestion Engine job |
+| `workmanager` | Background sync engine + daily Suggestion Engine job (future; not used for embedding backfill in Phase 3.3) |
 | `flutter_secure_storage` | Auth tokens, encryption keys |
 | `device_info_plus` | Device capability check for model tiering |
 | `speech_to_text` (or platform channel to native ASR) | Voice transcription, outside the LLM |
@@ -383,11 +340,12 @@ This staged plan is exactly why the provider abstraction in Section 6 exists: sw
 |---|---|---|---|
 | Isar over Supabase-as-primary | Offline-first, zero query latency, privacy by default | Multi-device sync is now something we build, not something the backend gives us for free | Matches the product's own privacy-by-design principle; sync complexity is bounded (Section 5), not open-ended |
 | `isar_community` over official `isar` | Ongoing maintenance | A less battle-tested fork than the original at its peak | Official `isar` maintenance has slowed — betting on the actively maintained fork is the more defensible long-term call |
-| On-device Gemma 3n over cloud LLM | No per-call cost, real privacy, offline capability | Weaker extraction accuracy than a frontier cloud model; real device-fragmentation risk | Directly serves the stated goals (privacy, cost, offline); mitigated by conservative confidence defaults and tiered device support |
-| Platform-native ASR/OCR over multimodal LLM | Better accuracy, lower RAM/battery cost, smaller required model | One more provider interface to maintain | The LLM should do what only it can do — structured reasoning — not tasks mature OS APIs already do better |
+| On-device Gemma 4 (+ optional Gecko) over cloud LLM | No per-call cost, real privacy, offline capability | Weaker extraction than a frontier cloud model; real device-fragmentation / RAM risk | Directly serves privacy, cost, offline; mitigated by confidence defaults, tiered devices, mutex + `releaseResident()` |
+| Platform-native ASR/OCR over multimodal LLM | Better accuracy, lower RAM/battery cost, smaller required model | One more provider interface to maintain | The LLM should do structured reasoning — not tasks mature OS APIs already do better |
+| Dedicated Gecko embedder over “reuse Gemma for vectors” | Honest API boundary; public download; measured Tier 2 quality | Extra ~114 MB download + ~250 MB RSS when loaded | Gemma 4 `InferenceModel` has no embed API (Phase 3.2 spike / ADR-013) |
 | Brute-force local embeddings over pgvector | Radically simpler, no server dependency, fast enough at real scale | Would need revisiting at a scale this product is unlikely to reach for a long time | Solving for a scale problem we don't have is exactly the over-engineering this project has avoided throughout |
 | Last-write-wins sync over per-field merge | Simple, predictable, fast to build | Real data loss risk in true concurrent-edit scenarios | Acceptable for a mostly single-device, single-editor product; explicitly flagged to revisit if/when shared circles (P1) ship |
-| Fine-tuned FunctionGemma deferred to P1 | Avoids blocking MVP on a fine-tuning pipeline you don't have data for yet | Slightly worse footprint/accuracy trade-off during MVP than the optimized future state | You need real extraction examples before fine-tuning helps at all — Gemma 3n E2B zero-shot is the correct MVP default |
+| Fine-tuned small function-caller deferred | Avoids blocking MVP on a fine-tuning pipeline without data | Slightly worse footprint/accuracy trade-off during MVP than an optimized future state | Need real extraction examples first — Gemma 4 E2B zero-shot FC is the correct MVP default |
 
 ---
 
