@@ -15,6 +15,9 @@ import '../features/capture/model_setup_screen.dart';
 import '../features/capture/photo/ocr_text_args.dart';
 import '../features/capture/photo/ocr_text_screen.dart';
 import '../features/capture/photo/photo_capture_screen.dart';
+import '../features/capture/share/share_providers.dart';
+import '../features/capture/share/share_text_screen.dart';
+import '../features/capture/share/shared_capture_payload.dart';
 import '../features/capture/voice/voice_recording_screen.dart';
 import '../features/capture/voice/voice_transcript_screen.dart';
 import '../features/circle/circle_screen.dart';
@@ -52,13 +55,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final onSplash = location == AppRoutes.splash;
       final onAuth = location == AppRoutes.auth;
+      final onShare = location == AppRoutes.captureShare;
+      final pendingShare = ref.read(pendingShareProvider);
 
       if (auth.isLoading) {
+        // Never yank an in-progress share capture back to splash.
+        if (onShare || pendingShare != null) {
+          return onSplash || onShare ? null : AppRoutes.captureShare;
+        }
         return onSplash ? null : AppRoutes.splash;
       }
 
       if (auth.isAuthenticated) {
         if (onSplash || onAuth) {
+          // Share flow: never land on Circle while a share is staged.
+          if (pendingShare != null) {
+            return AppRoutes.captureShare;
+          }
           return AppRoutes.circle;
         }
         return null;
@@ -212,6 +225,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           }
           return OcrTextScreen(args: args);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: AppRoutes.captureShare,
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          final payload =
+              extra is SharedCapturePayload ? extra : null;
+          return MaterialPage<void>(
+            key: ValueKey<Object>(
+              payload == null
+                  ? state.pageKey
+                  : Object.hash(payload.text, payload.sourceRef),
+            ),
+            name: AppRoutes.captureShare,
+            child: ShareTextScreen(initialPayload: payload),
+          );
         },
       ),
       GoRoute(

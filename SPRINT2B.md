@@ -165,7 +165,7 @@ Do not create a second manual-entry form, a second validation path, or a second 
 
 - `share_intent_handler.dart` receives shared text from other apps (via a share-intent package or platform channel — confirm the package at implementation time).
 - Shared text enters the same extraction path as typed text — no separate pipeline.
-- `sourceType = SourceType.share`; `sourceRef = null`.
+- `sourceType = SourceType.share`; `sourceRef` reserved for referring-app id when the platform exposes it (null in 2B.6 MVP).
 
 ## 9. Unsupported-Device Fallback, Extended to Voice/Photo
 
@@ -285,7 +285,7 @@ Implement **only** in this order. Do not skip ahead to voice/OCR/share/clarifica
 | **2B.3** | Create Person during capture | **Done.** Exact-match Create Person dialog on confirmation; no auto-create | **Medium** | Fuzzy similar-name suggestions remain backlog |
 | **2B.4** | Voice capture | **Done.** Platform STT → editable transcript → existing extract/confirm; `sourceType=voice`; audio `sourceRef` backlog | **High** | OS ASR variance; file retention debt; RAM with model loaded |
 | **2B.5** | OCR / Photo capture | **Done.** ML Kit OCR → editable text → existing extract/confirm; `sourceType=photo` + local image `sourceRef` | **High** | Empty OCR; permissions; avoid scene captioning scope creep |
-| **2B.6** | Share to Tend | Share-intent handler; `SourceType.share`; cold-start into capture | **Medium–High** | App-not-running share lifecycle; package choice at implement time |
+| **2B.6** | Share to Tend | **Done.** Android SEND text → editable Share Capture → existing extract/confirm; `sourceType=share` | **Medium–High** | Cold-start pending share + auth redirect; package id not yet exposed by plugin |
 | **2B.7** | Clarification + confidence polish | Add `clarificationNeeded` only once multi-extract is understood; passive note; confidence badge polish | **Low–Medium** | Explicitly last — implement clarification only when genuinely needed |
 
 ### Dependency sketch

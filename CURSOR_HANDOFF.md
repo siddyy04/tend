@@ -2,7 +2,7 @@
 
 **Purpose:** Onboard a new Cursor chat to continue Tend development without prior conversation history.  
 **Product:** Tend — offline-first personal relationship memory app (Flutter).  
-**Last updated:** Sprint 2A closed (cleanup + Gemma 4 LiteRT-LM). **Next: Sprint 2B.**
+**Last updated:** Sprint 2B.1–2B.6 done (multi-memory, Create Person, Voice, OCR, Share). **Next: 2B.7.**
 
 ---
 
@@ -11,7 +11,7 @@
 - **Sprint 0 / 1A / 1B / 2A:** Done and closed.
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
 - **Working app:** Auth (Supabase email/password), Isar, go_router shell, Person CRUD, Memory CRUD, Person Profile, **text capture → on-device extraction → confirmation → Isar save**, model setup gate (auto-download primary).
-- **Next work:** **Sprint 2B** — **2B.1–2B.5 done**. Next: **2B.6** Share → clarification/confidence polish.
+- **Next work:** **Sprint 2B** — **2B.1–2B.6 done**. Next: **2B.7** Clarification + confidence polish.
 - **Still later:** Sprint 3+ (opportunities, search, sync, settings polish).
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade). Smaller accepted decisions: see `ADR.md`.
 
@@ -64,15 +64,17 @@ Capture / Confirmation / repos / validation stay model-agnostic.
 | `ExtractionProvider` + result types | Done (no `clarificationNeeded` in 2A) |
 | `TranscriptionProvider` | Abstract; MVP concrete = `PlatformTranscriptionProvider` via `activeTranscriptionProvider`; long-form engine TBD (High Priority backlog) |
 | `OCRProvider` | Abstract; MVP concrete = `PlatformOCRProvider` (ML Kit) via `activeOCRProvider` |
+| `ShareIntentHandler` | Abstract; MVP = `PlatformShareIntentHandler` (`receive_sharing_intent`) → editable text → `SourceType.share` |
 | `EmbeddingProvider` | Interface only |
 | `LiteRtExtractionProvider` | Done — maps tool-call args → `ExtractionResult` |
 | `ManualFallbackProvider` | Done — empty candidates |
 | `LiteRtInferenceAdapter` | Done — LiteRT-LM + native FC; GPU→NPU→CPU; install kinds from catalog |
 | `LiteRtPromptBuilder` | Done — prompts + tool schema (no SDK import) |
 | `extraction_validation_rules` / `extraction_defaults` | Done |
-| Capture + confirmation + save | Done |
+| Capture + confirmation + save | Done (Typed / Voice / OCR / Share → same `CaptureSubmitFlow`) |
 | Model capability + download manager + setup UI | Done (staged: Downloading / Verifying / Installing / Preparing) |
-| Platform ASR/OCR, embeddings, multi-candidate | Not started (2B / later) |
+| ClarificationNeeded + confidence polish | **2B.7 next** |
+| Embeddings persistence | Later |
 
 **Capture / Confirmation / repositories must not import `flutter_gemma`.** Only `litert_inference_adapter.dart` may (plus debug probe under `lib/debug/`).
 

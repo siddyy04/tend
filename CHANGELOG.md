@@ -6,6 +6,23 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.3.9 — Share to Tend (Sprint 2B.6)
+
+## Added
+
+### Capture
+- Android Share Sheet can send plain text / URLs into Tend
+- Opens editable Shared text screen (cold start and warm start)
+- Continue uses the same extraction / confirmation pipeline as Typed, Voice, and OCR
+- Saved memories use `sourceType = share`
+
+## Notes
+
+- Images, PDFs, and multi-item shares remain backlog
+- Referring-app package id is not yet available from the share plugin (`sourceRef` null for now)
+
+---
+
 # v0.3.8 — Capture empty-state UX
 
 ## Changed

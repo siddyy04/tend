@@ -53,7 +53,7 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 
 **Capture flow (the core loop, must stay under 10 seconds):**
 1. User triggers capture (voice/text/photo/share-sheet).
-2. Voice → platform ASR → text. Photo → platform OCR → text.
+2. Voice → platform ASR → text. Photo → platform OCR → text. Share → editable shared text.
 3. Text goes to the local `ExtractionProvider` (LiteRT model via function calling).
 4. Extraction result (matching the Deliverable 5 JSON schema exactly) is validated: confidence thresholds, grounding-quote check, taxonomy check — all unchanged from the original design.
 5. Result written to a Riverpod state → confirmation card renders → user confirms/edits.
@@ -291,10 +291,11 @@ Concrete implementations live behind these interfaces:
 - `LiteRtExtractionProvider` — on-device LiteRT-LM via `flutter_gemma`, using **function-calling mode** to enforce the Deliverable 5 JSON schema. Which weights run is decided by `ModelCatalog` (MVP: Gemma 4 E2B), not by Capture/Confirmation.
 - `PlatformTranscriptionProvider` — **Sprint 2B.4 MVP** wraps iOS Speech / Android `SpeechRecognizer` via `speech_to_text`, **not the LLM**. Selected through `activeTranscriptionProvider`. Acceptable for short notes; **not** the long-term conversational / multi-minute transcription solution (see product backlog evaluation). Future long-form engines (Whisper, cloud STT, etc.) must implement the same `TranscriptionProvider` interface so Capture → Extraction → Confirmation stay unchanged.
 - `PlatformOCRProvider` — **Sprint 2B.5 MVP** wraps Google ML Kit text recognition via `google_mlkit_text_recognition`, **not the LLM**. Selected through `activeOCRProvider`. Screenshots / text-bearing photos only; scene captioning remains P1. Future OCR engines implement the same `OCRProvider` interface so Capture → Extraction → Confirmation stay unchanged.
+- `ShareIntentHandler` / `PlatformShareIntentHandler` — **Sprint 2B.6 MVP** converts Android share-sheet text/URLs (`receive_sharing_intent`) into editable Capture text only. No AI logic in the share path; Continue uses the same `CaptureSubmitFlow` as Typed / Voice / OCR with `SourceType.share`.
 - `ManualFallbackProvider` — a null-object implementation for devices that can't run a local model (Section 7): `extract()` returns "needs manual entry" instead of throwing, `embed()` returns null and search silently degrades to keyword-only. The app must never crash or block capture because the model isn't available — it should just quietly become the pre-AI version of itself.
 
-### Why ASR and OCR stay outside the LLM (and why the ASR *implementation* is swappable)
-Gemma *can* take audio and image input directly, but routing every voice note or screenshot through the full multimodal model is the heavier, slower, more battery-costly path for jobs that purpose-built ASR/OCR stacks can do. Reserve the LLM for structured reasoning over **text**. Platform STT is the MVP transcription backend; Tend’s product goal includes **long-form conversational voice**, so the transcription *provider* is intentionally abstracted and can be upgraded after a structured evaluation without touching Capture, Extraction, or Confirmation. Speech language preference (Settings) is provider-agnostic and should travel with any future engine.
+### Why ASR, OCR, and Share stay outside the LLM (and why the ASR *implementation* is swappable)
+Gemma *can* take audio and image input directly, but routing every voice note or screenshot through the full multimodal model is the heavier, slower, more battery-costly path for jobs that purpose-built ASR/OCR stacks can do. Reserve the LLM for structured reasoning over **text**. Platform STT is the MVP transcription backend; Tend’s product goal includes **long-form conversational voice**, so the transcription *provider* is intentionally abstracted and can be upgraded after a structured evaluation without touching Capture, Extraction, or Confirmation. Speech language preference (Settings) is provider-agnostic and should travel with any future engine. Share ingress similarly only produces editable text — never images, PDFs, or HTML markup for the model.
 
 ---
 

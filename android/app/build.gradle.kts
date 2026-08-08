@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.my_first_app"
-    compileSdk = flutter.compileSdkVersion
+    // receive_sharing_intent 1.9.0 requires compileSdk 37+ (Flutter default is still 36).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

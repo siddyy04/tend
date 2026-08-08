@@ -329,6 +329,94 @@ P1 / FEATURES vision captioning — **not** Sprint 2B. Requires explicit product
 
 ---
 
+### Share — images directly into OCR
+**Problem**
+Sprint 2B.6 accepts plain text (and URL-as-text) only. Sharing a photo from Gallery/Camera does not open Tend’s OCR path.
+
+**Proposed solution**
+- Accept `image/*` shares; hand image bytes/path to the existing OCR preview → recognize → editable text flow (`SourceType.photo` or share+photo provenance).
+- Keep AI text-only: share never feeds pixels to Gemma.
+
+---
+
+### Share — PDFs
+**Problem**
+Users often share PDFs (tickets, docs) that Tend cannot ingest.
+
+**Proposed solution**
+- Accept PDF shares; extract text (and/or rasterize pages for OCR) into editable text before Capture.
+- Define size/page limits and failure UX.
+
+---
+
+### Share — multiple items
+**Problem**
+Android can share multiple URIs/texts; MVP takes a single text payload only.
+
+**Proposed solution**
+- Support multi-item shares: concatenate text, or present a chooser / merge UI before Continue.
+- Avoid ambiguous silent drops of extra items.
+
+---
+
+### Share — rich HTML cleanup
+**Problem**
+Some apps share `text/html` or HTML-ish paste; raw markup pollutes extraction.
+
+**Proposed solution**
+- Strip tags / decode entities into readable plain text before the editable Share screen.
+- Do not pass HTML to the model.
+
+---
+
+### Share — automatic webpage / article extraction
+**Problem**
+Shared URLs currently pre-fill as the URL string only; article body is not fetched.
+
+**Proposed solution**
+- Optional offline-friendly fetch + readability extraction into editable text (with privacy/network policy).
+- User always edits before Continue.
+
+---
+
+### Share — email metadata extraction
+**Problem**
+Shared emails/snippets lack structured From/Subject/Date for memory grounding.
+
+**Proposed solution**
+- Parse common email share formats; surface metadata as editable preamble or structured fields without changing the extraction protocol.
+
+---
+
+### Share — conversation threads
+**Problem**
+WhatsApp/Messages share often includes partial threads; MVP treats all as one blob.
+
+**Proposed solution**
+- Detect thread-like formatting; optional segmenting into multiple capture candidates or clearer editable layout.
+
+---
+
+### Share — audio into Voice transcription
+**Problem**
+Shared audio files are out of scope; users may want “transcribe this voice note.”
+
+**Proposed solution**
+- Accept audio shares → existing or file-based STT → editable transcript → Capture (`SourceType.voice` or share provenance).
+- AI never receives raw audio.
+
+---
+
+### Share — analytics (source app)
+**Problem**
+`sourceRef` / referring package is not yet populated; product cannot learn which apps drive Share.
+
+**Proposed solution**
+- Persist referring package/app id when the platform exposes it (no UI exposure).
+- Privacy-preserving funnel metrics for share → edit → extract → save.
+
+---
+
 ### OCR — original image retention/deletion policy
 **Problem**
 Sprint 2B.5 stores images under `documents/captures/` as `sourceRef`; retention and purge rules are undefined.

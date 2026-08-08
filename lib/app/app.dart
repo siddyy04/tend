@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'router.dart';
+import '../features/capture/share/share_intent_bootstrap.dart';
 
 /// Root application widget.
 ///
@@ -26,6 +27,11 @@ class App extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Tend',
       routerConfig: router,
+      builder: (context, child) {
+        return ShareIntentBootstrap(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

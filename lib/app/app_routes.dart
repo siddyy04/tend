@@ -11,6 +11,7 @@ abstract final class AppRoutes {
   static const captureVoiceTranscript = '/capture/voice/transcript';
   static const capturePhoto = '/capture/photo';
   static const capturePhotoText = '/capture/photo/text';
+  static const captureShare = '/capture/share';
   static const captureConfirm = '/capture/confirm';
   static const captureConfirmSummary = '/capture/confirm/summary';
   static const captureConfirmMulti = '/capture/confirm/multi';

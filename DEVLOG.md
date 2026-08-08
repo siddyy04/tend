@@ -167,4 +167,13 @@
 - Failure only for genuine pipeline issues (`lastPipelineFailureReason` / exceptions)
 - Prompt: no placeholders (N/A/None/Unknown/-); zero calls when no person + stable memory
 
+### Phase 2B.6 — Share to Tend
+
+- Android `SEND` `text/*` intent-filter; `launchMode=singleTask`
+- `PlatformShareIntentHandler` (`receive_sharing_intent`) → pending share → `/capture/share`
+- Cold start: initial media held through splash/auth; redirect to Share Capture instead of Circle when pending
+- Warm start: media stream navigates to Share Capture
+- Editable shared text → `CaptureSubmitFlow` with `SourceType.share`; shared empty-state panel
+- Backlog: share images→OCR, PDFs, multi-item, HTML cleanup, article extraction, email metadata, threads, audio→voice, share analytics
+
 
