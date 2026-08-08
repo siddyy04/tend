@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:my_first_app/ai/providers/ai_provider_selection.dart';
+import 'package:my_first_app/ai/providers/search/hybrid_search_models.dart';
 import 'package:my_first_app/ai/providers/search/keyword_search_provider.dart';
 import 'package:my_first_app/ai/providers/search/search_provider.dart';
 import 'package:my_first_app/core/analytics/search_analytics.dart';
@@ -43,33 +45,39 @@ class SearchControllerArgs {
 class SearchUiState {
   const SearchUiState({
     this.query = '',
-    this.results = const AsyncData(<SearchHit>[]),
+    this.results = const AsyncData(HybridSearchResult.empty),
     this.corpusEmpty = false,
     this.hasCompletedSearch = false,
+    this.tier2Loading = false,
   });
 
   final String query;
-  final AsyncValue<List<SearchHit>> results;
+  final AsyncValue<HybridSearchResult> results;
 
   /// True when the scoped corpus has zero active memories.
   final bool corpusEmpty;
 
-  /// True after a debounced non-empty query has finished (success or error).
+  /// True after a debounced non-empty query has finished Tier 1 (success or error).
   final bool hasCompletedSearch;
+
+  /// True while Tier 2 is still computing after Tier 1 painted.
+  final bool tier2Loading;
 
   bool get isIdle => normalizeSearchQuery(query).isEmpty;
 
   SearchUiState copyWith({
     String? query,
-    AsyncValue<List<SearchHit>>? results,
+    AsyncValue<HybridSearchResult>? results,
     bool? corpusEmpty,
     bool? hasCompletedSearch,
+    bool? tier2Loading,
   }) {
     return SearchUiState(
       query: query ?? this.query,
       results: results ?? this.results,
       corpusEmpty: corpusEmpty ?? this.corpusEmpty,
       hasCompletedSearch: hasCompletedSearch ?? this.hasCompletedSearch,
+      tier2Loading: tier2Loading ?? this.tier2Loading,
     );
   }
 }
@@ -94,6 +102,8 @@ class SearchController extends Notifier<SearchUiState> {
     ref.onDispose(() {
       _debounce?.cancel();
     });
+    // Warm backfill controller while Search is used.
+    ref.watch(embeddingBackfillControllerProvider);
     return const SearchUiState();
   }
 
@@ -105,9 +115,10 @@ class SearchController extends Notifier<SearchUiState> {
     if (normalized.isEmpty) {
       _requestId++;
       state = state.copyWith(
-        results: const AsyncData(<SearchHit>[]),
+        results: const AsyncData(HybridSearchResult.empty),
         hasCompletedSearch: false,
         corpusEmpty: false,
+        tier2Loading: false,
       );
       return;
     }
@@ -119,12 +130,16 @@ class SearchController extends Notifier<SearchUiState> {
 
   Future<void> _runSearch(String normalizedQuery) async {
     final id = ++_requestId;
-    state = state.copyWith(results: const AsyncLoading());
+    state = state.copyWith(
+      results: const AsyncLoading(),
+      tier2Loading: false,
+    );
 
     try {
-      final search = ref.read(activeSearchProvider);
+      final keyword = ref.read(activeSearchProvider);
       final analytics = ref.read(searchAnalyticsProvider);
       final memoryRepo = ref.read(memoryRepositoryProvider);
+      final composer = ref.read(hybridResultComposerProvider);
 
       final query = SearchQuery(
         text: normalizedQuery,
@@ -132,29 +147,47 @@ class SearchController extends Notifier<SearchUiState> {
         personUuid: args.personUuid,
       );
 
-      final hits = await search.search(query);
+      // Tier 1 first — protect keyword latency.
+      final tier1 = await keyword.search(query);
       if (id != _requestId) return;
 
       final corpusEmpty = await _isCorpusEmpty(memoryRepo);
       if (id != _requestId) return;
 
+      final partial = composer.compose(tier1: tier1, tier2Candidates: const []);
       analytics.searchPerformed(
         query: normalizedQuery,
-        resultCount: hits.length,
+        resultCount: partial.totalCount,
         scope: args.scope,
         personUuid: args.personUuid,
       );
 
       state = state.copyWith(
-        results: AsyncData(hits),
+        results: AsyncData(partial),
         corpusEmpty: corpusEmpty,
         hasCompletedSearch: true,
+        tier2Loading: true,
+      );
+
+      // Tier 2 — additive; failures stay Tier-1-only.
+      final semantic = ref.read(semanticSearchProvider);
+      List<SearchHit> tier2 = const [];
+      if (semantic != null) {
+        tier2 = await semantic.search(query);
+      }
+      if (id != _requestId) return;
+
+      final hybrid = composer.compose(tier1: tier1, tier2Candidates: tier2);
+      state = state.copyWith(
+        results: AsyncData(hybrid),
+        tier2Loading: false,
       );
     } catch (e, st) {
       if (id != _requestId) return;
       state = state.copyWith(
         results: AsyncError(e, st),
         hasCompletedSearch: true,
+        tier2Loading: false,
       );
     }
   }

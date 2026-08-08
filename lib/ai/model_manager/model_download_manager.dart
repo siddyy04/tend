@@ -605,6 +605,96 @@ class ModelDownloadManager {
     }
   }
 
+  /// Downloads [fileName] from [downloadUrl] into the shared models directory.
+  ///
+  /// Used by embedding artifacts (Gecko) so Phase 3.3 does not invent a second
+  /// HTTP download stack. [checksumHex] empty → presence-only verification.
+  Future<String> ensureDownloadedFile({
+    required String fileName,
+    required String downloadUrl,
+    String checksumHex = '',
+    void Function(ModelPrepareProgress progress)? onProgress,
+  }) async {
+    final path = p.join((await modelsDirectory()).path, fileName);
+    if (await _isVerifiedPath(path, checksumHex)) {
+      return path;
+    }
+
+    if (downloadUrl.trim().isEmpty) {
+      throw ModelPrepareException(
+        userMessage:
+            'Automatic download is not available. Please install the file manually.',
+        technicalDetails: 'No download URL for $fileName.',
+      );
+    }
+
+    final tempPath = '$path.download';
+    try {
+      onProgress?.call(
+        const ModelPrepareProgress(
+          phase: ModelPreparePhase.downloading,
+          fraction: 0,
+        ),
+      );
+      await _downloadToFile(
+        url: downloadUrl,
+        destinationPath: tempPath,
+        onProgress: (progress) {
+          onProgress?.call(
+            ModelPrepareProgress(
+              phase: ModelPreparePhase.downloading,
+              fraction: progress,
+            ),
+          );
+        },
+      );
+
+      onProgress?.call(
+        const ModelPrepareProgress(phase: ModelPreparePhase.verifying),
+      );
+      if (!await _verifyPath(tempPath, checksumHex)) {
+        await _deleteQuietly(tempPath);
+        throw ModelPrepareException(
+          userMessage:
+              'The downloaded file could not be verified. Please try again.',
+          technicalDetails: 'Verification failed for $fileName.',
+        );
+      }
+
+      final dest = File(path);
+      if (await dest.exists()) {
+        await dest.delete();
+      }
+      await File(tempPath).rename(path);
+      return path;
+    } on ModelPrepareException catch (e) {
+      if (!e.isRetryable) {
+        await _deleteQuietly(tempPath);
+      }
+      rethrow;
+    } catch (e) {
+      final mapped = _mapToPrepareException(e);
+      if (!mapped.isRetryable) {
+        await _deleteQuietly(tempPath);
+      }
+      throw mapped;
+    }
+  }
+
+  Future<bool> _isVerifiedPath(String path, String checksumHex) async {
+    final file = File(path);
+    if (!await file.exists()) return false;
+    return _verifyPath(path, checksumHex);
+  }
+
+  Future<bool> _verifyPath(String path, String checksumHex) async {
+    if (checksumHex.trim().isEmpty) {
+      return File(path).exists();
+    }
+    final digest = await sha256.bind(File(path).openRead()).first;
+    return digest.toString().toLowerCase() == checksumHex.trim().toLowerCase();
+  }
+
   /// Closes the owned HTTP client (no-op when a client was injected).
   void dispose() {
     if (_ownsHttpClient) {

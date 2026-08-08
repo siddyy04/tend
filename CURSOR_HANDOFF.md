@@ -2,7 +2,7 @@
 
 **Purpose:** Onboard a new Cursor chat to continue Tend development without prior conversation history.  
 **Product:** Tend — offline-first personal relationship memory app (Flutter).  
-**Last updated:** Sprint **3 Phase 3.2** embedding spike complete — **Conditional Go** (Gecko, not Gemma 4). Findings: [`SPRINT3_2_FINDINGS.md`](SPRINT3_2_FINDINGS.md); ADR-013. **Next:** product confirm Phase 3.3 or stay keyword-only — not Suggestion Engine.
+**Last updated:** Sprint **3 Phase 3.3/3.4 complete** — hybrid Search + stabilization **PASS** (M7 fixed via Gecko `releaseResident` before extract; warm avg **7163 ms**). QA: [`SPRINT3_3_QA.md`](SPRINT3_3_QA.md). **Next:** single commit + `v0.5.0` tag, then Sprint 4 planning (not implementation until planned).
 
 ---
 
@@ -12,13 +12,15 @@
 - **Post-2A architectural gate:** Done — LiteRT provider rename + catalog (ADR-010); **Gemma 4 E2B** as sole MVP model via LiteRT-LM (ADR-011). Qwen / MediaPipe `.task` retired from production.
 - **Foundation Cleanup (pre-Sprint 3):** Done — `FollowUp.deletedAt` schema contract; `PersonRepository.getByUuid` soft-delete filter; relative-date resolution + backfill. See `FOUNDATION_CLEANUP.md` / CHANGELOG.
 - **Sprint 3 Phase 3.1:** Done — global + person-scoped **keyword** Search.
-- **Sprint 3 Phase 3.2:** Done — embedding spike; **Conditional Go** on dedicated **Gecko** embedder (not Gemma 4 E2B). See [`SPRINT3_2_FINDINGS.md`](SPRINT3_2_FINDINGS.md) / ADR-013.
-- **Working app:** Auth, Isar, Person/Memory CRUD, Capture (4 modes), keyword Search (offline). Embeddings **not** wired in production.
-- **Next work:** Product decision on **Phase 3.3** (semantic search implementation per Conditional Go) **or** stay on keyword-only. Do **not** start Suggestion Engine / FollowUps (Sprint 4).
-- **Still later:** Phase 3.4 hybrid / 3.5 RC if 3.3 proceeds; then Sprint 4 Suggestion Engine.
+- **Sprint 3 Phase 3.2:** Done — embedding spike; Conditional Go (Gecko).
+- **Sprint 3 Phase 3.3:** Done — tiered hybrid Search (keyword Tier 1 + Gecko Tier 2).
+- **Sprint 3 Phase 3.4:** Done — stabilization PASS; M7 fixed (release Gecko before extract). See [`SPRINT3_3_QA.md`](SPRINT3_3_QA.md).
+- **Working app:** Auth, Isar, Person/Memory CRUD, Capture (4 modes), keyword + optional semantic Search.
+- **Next work:** Create **`v0.5.0` commit + tag** when asked; then Sprint 4 (Suggestion Engine) **planning** only until a Sprint 4 spec is approved.
+- **Still later:** Sprint 4 implementation.
 - **Deferred product debt:** see `BACKLOG.md` (e.g. person→memory cascade; Search polish). Smaller accepted decisions: see `ADR.md`.
 
-**Binding docs:** `ARCHITECTURE.md`, `ADR.md`, `FEATURES.md`, `SCHEMA.md`, `DEVELOPMENT_ROADMAP.md`, `SPRINT0.md`–`SPRINT2B8.md`, `SPRINT3.md`, `SPRINT3_1.md`, `RELEASE_READINESS_REPORT.md`, `DEVLOG.md`, `BACKLOG.md`, this file.
+**Binding docs:** `ARCHITECTURE.md`, `ADR.md`, `FEATURES.md`, `SCHEMA.md`, `DEVELOPMENT_ROADMAP.md`, `SPRINT0.md`–`SPRINT2B8.md`, `SPRINT3.md`, `SPRINT3_1.md`, `SPRINT3_2.md`, `SPRINT3_2_FINDINGS.md`, `SPRINT3_3.md`, `SPRINT3_3_IMPLEMENTATION.md`, `SPRINT3_3_QA.md`, `RELEASE_READINESS_REPORT.md`, `DEVLOG.md`, `BACKLOG.md`, this file.
 
 ---
 

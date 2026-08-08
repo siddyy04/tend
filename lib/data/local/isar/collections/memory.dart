@@ -29,7 +29,10 @@ class Memory {
   late SourceType sourceType;
   String? sourceRef; // LOCAL file path (audio/photo) — never a cloud URL
   late bool needsUserConfirmation;
-  List<double>? embedding; // local semantic search vector
+  List<double>? embedding; // local semantic search vector (Gecko: 768-d)
+  /// e.g. `gecko-110m-en-seq256-v1`; null = never embedded / needs backfill.
+  @Index()
+  String? embeddingModelVersion;
   late DateTime createdAt;
   late DateTime updatedAt;
   @enumerated

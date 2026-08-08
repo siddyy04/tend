@@ -6,6 +6,27 @@ This project follows a simple chronological changelog.
 
 ---
 
+# v0.5.0 — Phase 3.3 hybrid semantic search + 3.4 stabilization
+
+## Added
+
+- Optional on-device **Gecko** embedder (~114 MB) for “possibly related” search results (Tier 2)
+- Settings: download, defer, or prepare the semantic search model
+- Async embedding after memory save + foreground backfill while the app is open
+- Shared on-device inference lock so capture extraction and embedding never run at the same time
+
+## Fixed
+
+- Warm extraction latency with Gecko loaded — embedder worker is released before Gemma inference (keeps ≤8 s capture gate)
+
+## Notes
+
+- Keyword search (Tier 1) unchanged; Tier 2 threshold calibrated to **0.70**
+- Phase 3.4 QA: all M1–M12 + mutex soak **PASS** on AIN065 release — see `SPRINT3_3_QA.md`
+- Architecture unchanged: tiered hybrid, async queue, mutex, foreground-only backfill
+
+---
+
 # v0.4.2 — Phase 3.2 embedding spike (decision only)
 
 ## Notes

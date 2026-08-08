@@ -17,7 +17,7 @@
 | Capture (global modal) | Voice (default), text, photo, OS share-sheet |
 | Capture Confirmation Card | Editable structured fields before save — never auto-save below confidence threshold |
 | Today's Opportunities | Max 5 items/day, each with a one-line "why this surfaced" |
-| Search | Natural-language, person-scoped and global — local embeddings, no network required |
+| Search | Natural-language, person-scoped and global — keyword Tier 1 + optional Gecko semantic Tier 2; no network required for query |
 | Settings | Data export, delete person/memory/account, backup/sync toggle (default OFF) |
 
 ### Capabilities
@@ -29,7 +29,7 @@
 | Voice transcription | Platform-native speech-to-text — **not routed through the LLM** | — |
 | Confidence-gated confirmation | Full — low `extractionConfidence` or `personMatchConfidence` routes to manual confirm | — |
 | Suggestion Engine | Rule-based scoring (unchanged logic), run as a **local scheduled background task** against Isar — no cloud job | Per-user learned weighting → P1 |
-| Natural language search | Local embeddings (via `EmbeddingProvider`) + brute-force cosine scan in Dart over Isar records | ANN indexing → only if real usage data shows it's needed |
+| Natural language search | Tiered hybrid: keyword/substring (Phase 3.1) + optional Gecko embeddings + cosine Tier 2 (Phase 3.3) | ANN indexing → only if real usage data shows it's needed |
 | Offline operation | **Default mode, not a fallback.** Every P0 feature works fully offline; sync is an optional add-on, not a dependency | — |
 | Backup / sync | Opt-in, default OFF. Supabase mirror, last-write-wins conflict resolution | Real-time multi-device sync, shared circles → P1 |
 | Model management | On-demand model download (not bundled), device capability check, graceful manual-mode fallback for unsupported devices | Fine-tuned specialist model swap-in → P1 |

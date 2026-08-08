@@ -16,11 +16,11 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 |---|---|---|
 | Local database | Isar (`isar_community` fork) | Source of truth, works fully offline |
 | State management | Riverpod (code-gen) | All business logic, no logic in widgets |
-| AI inference | On-device LiteRT-LM (via `flutter_gemma` + `flutter_gemma_litertlm`), behind an abstract provider interface; model chosen by `ModelCatalog` (MVP: Gemma 4 E2B) | Extraction + embeddings |
+| AI inference | On-device LiteRT-LM (via `flutter_gemma` + `flutter_gemma_litertlm`) for extraction; dedicated Gecko embedder (`flutter_gemma_embeddings`) for vectors | Extraction + embeddings |
 | ASR (voice-to-text) | Swappable `TranscriptionProvider` — MVP: platform-native STT; long-form engine TBD after evaluation | Not the LLM — see Section 6 |
 | OCR (screenshots) | Platform-native on-device OCR (ML Kit / Vision) | Not the LLM — see Section 6 for why |
 | Backend | Supabase | Auth + optional backup/sync only |
-| Semantic search | Local embeddings + brute-force cosine scan in Dart | No pgvector, no ANN index needed at MVP scale |
+| Semantic search | Tiered hybrid: keyword Tier 1 + Gecko cosine Tier 2 | No pgvector, no ANN index needed at MVP scale |
 
 ---
 
@@ -63,7 +63,7 @@ Isar (via `isar_community`) is the single source of truth on-device. All AI (ext
 
 **Suggestion Engine flow:** unchanged from Deliverable 6 in logic, changed in execution — a scheduled local background task (`workmanager`) queries Isar directly (no cloud round-trip), scores candidates with the same rule-based formula, writes to the local `suggestion_log` collection, and triggers a local notification.
 
-**Search flow:** query text → local embedding via the same `EmbeddingProvider` → brute-force cosine similarity scan across the user's `memories` in Isar → ranked results, each traceable to its source memory.
+**Search flow:** query text → **Tier 1** keyword/substring search (Phase 3.1, always on) → optional **Tier 2** query embedding via `GeckoEmbeddingProvider` + brute-force cosine over version-valid memory embeddings → `HybridResultComposer` appends semantic-only hits under “Possibly related”. Keyword ranking is never reordered by semantic scores.
 
 ---
 
@@ -322,7 +322,7 @@ This is the one place I'd actively push back on "just ship Gemma 3n E2B for ever
 
 - **Extraction (text → structured Memory JSON):** start with **Gemma 3n E2B in zero-shot function-calling mode** for MVP — it works out of the box with no training data required, which matters because you don't have any extraction examples to fine-tune with yet.
 - **Once you have real usage data (post-Concierge-pilot / post-beta):** fine-tune **FunctionGemma (270M)** — a Gemma 3 270M variant purpose-built for function calling — on your own captured extraction examples. Google's own benchmark shows accuracy jumping from 58% zero-shot to 85% after task-specific fine-tuning; it is explicitly *not* meant to be used zero-shot. That fine-tuning requirement is exactly why it isn't the Sprint 2 default — you need real examples first — but once you have them, a fine-tuned 270M specialist is dramatically smaller (a few hundred MB vs. ~3GB), faster, and runs comfortably on lower-RAM devices than a general-purpose Gemma 3n, likely *improving* extraction accuracy on your narrow, well-defined task rather than trading accuracy for size. Treat this as a defined P1 roadmap item, not a someday-maybe: it directly widens your supported-device floor.
-- **Embeddings:** use Gemma 3n's built-in embedding support (via `flutter_gemma`) rather than a separate model/pipeline — one less thing to download and version.
+- **Embeddings:** dedicated **Gecko-110m-en** via `flutter_gemma_embeddings` (Phase 3.3 / ADR-013) — not Gemma 4 E2B (no embed API on InferenceModel).
 - **ASR/OCR:** platform-native, as covered in Section 6 — never the LLM.
 
 This staged plan is exactly why the provider abstraction in Section 6 exists: swapping the `ExtractionProvider` implementation from Gemma-3n-zero-shot to fine-tuned-FunctionGemma later is a contained change, not a rearchitecture.
@@ -331,8 +331,14 @@ This staged plan is exactly why the provider abstraction in Section 6 exists: sw
 
 ## 8. Semantic Search Architecture
 
-- Generate an embedding for each memory **at capture time** (via `EmbeddingProvider`, one extra local inference call already inside the existing capture latency budget) and store it directly on the `Memory` collection as `List<double>`.
-- At query time, embed only the query string (cheap — one short text) and run a **brute-force cosine similarity scan in Dart** across the user's memories.
+- Phase 3.1 ships **keyword search** as Tier 1 (always on, offline).
+- Phase 3.3 adds **Gecko-110m-en** embeddings (768-d) via `GeckoEmbeddingProvider` / `GeckoInferenceAdapter` (sole `flutter_gemma_embeddings` import).
+- Embeddings are generated **asynchronously after** Memory persistence (and via foreground batched backfill) — never on the capture save critical path.
+- Persist `embeddingModelVersion` with every vector; stale/null versions are Tier-2-ineligible until re-embedded.
+- Query time: embed the query; brute-force cosine in Dart over valid vectors; apply a tunable absolute threshold; append Tier 2 below Tier 1 (**tiered**, not blended).
+- Gemma-4 extraction and Gecko embedding share an `AiInferenceMutex` (extraction priority).
+- Gecko download is optional (~114 MB), independent of the Gemma setup gate; decline → keyword-only.
+- At MVP scale, no ANN index. Shared with SCHEMA.md / ADR-013 / `SPRINT3_3.md`.
 - **This is a deliberate simplification, not a compromise.** pgvector's ANN indexing (ivfflat/HNSW) exists to solve a scale problem — millions of vectors — that a single user's personal relationship history will never approach. Realistic per-user scale is hundreds to low thousands of memories; scanning that many short float vectors is on the order of milliseconds on a phone CPU. No index is needed at MVP.
 - **Escape hatch, not needed now:** if a power user's dataset ever grows large enough that the linear scan becomes noticeable, add a keyword pre-filter using Isar's native indexed/full-text query capability to narrow candidates before the vector scan — cheap to add later, not worth building speculatively now.
 - **Worth instrumenting before over-investing further:** structured filtering (by person, category, date range) may cover most real "search" behavior in early usage, with semantic recall needed less often than assumed. Cheap to check with real beta data; expensive to have built a bigger pipeline than the actual usage pattern needed.

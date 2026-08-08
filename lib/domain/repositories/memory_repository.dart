@@ -25,6 +25,19 @@ abstract class MemoryRepository {
   /// Soft-delete only: sets [Memory.deletedAt], [Memory.updatedAt], and
   /// [Memory.syncStatus] — never hard-deletes the Isar row.
   Future<void> softDelete(String uuid);
+
+  /// Active memories whose embedding is missing or not [currentVersion].
+  Future<List<Memory>> getMemoriesNeedingEmbedding(
+    String currentVersion, {
+    int? limit,
+  });
+
+  /// Persist embedding fields only (load-merge-put).
+  Future<void> updateEmbedding({
+    required String uuid,
+    required List<double> embedding,
+    required String embeddingModelVersion,
+  });
 }
 
 /// Isar-backed [MemoryRepository].
@@ -92,6 +105,50 @@ class IsarMemoryRepository implements MemoryRepository {
       final now = DateTime.now();
       memory.deletedAt = now;
       memory.updatedAt = now;
+      memory.syncStatus = SyncStatus.pending;
+      await _isar.memorys.put(memory);
+    });
+  }
+
+  @override
+  Future<List<Memory>> getMemoriesNeedingEmbedding(
+    String currentVersion, {
+    int? limit,
+  }) async {
+    final all = await _isar.memorys.filter().deletedAtIsNull().findAll();
+    final needing = <Memory>[];
+    for (final m in all) {
+      final version = m.embeddingModelVersion;
+      final embedding = m.embedding;
+      final stale = version == null ||
+          version != currentVersion ||
+          embedding == null ||
+          embedding.isEmpty;
+      if (stale) {
+        needing.add(m);
+        if (limit != null && needing.length >= limit) break;
+      }
+    }
+    return needing;
+  }
+
+  @override
+  Future<void> updateEmbedding({
+    required String uuid,
+    required List<double> embedding,
+    required String embeddingModelVersion,
+  }) async {
+    await _isar.writeTxn(() async {
+      final memory = await _isar.memorys
+          .filter()
+          .uuidEqualTo(uuid)
+          .and()
+          .deletedAtIsNull()
+          .findFirst();
+      if (memory == null) return;
+      memory.embedding = embedding;
+      memory.embeddingModelVersion = embeddingModelVersion;
+      memory.updatedAt = DateTime.now();
       memory.syncStatus = SyncStatus.pending;
       await _isar.memorys.put(memory);
     });

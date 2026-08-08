@@ -233,3 +233,32 @@
 - Cut: battery Exp 6, RSS delta, real search-log queries, live corpus cardinality
 - Production Search / Capture untouched; `flutter_gemma_embeddings` in pubspec but backends registered only in spike harness
 
+## Sprint 3 Phase 3.3 — Hybrid semantic search (implementation)
+
+- Spec: `SPRINT3_3_IMPLEMENTATION.md` (binding); architecture `SPRINT3_3.md`
+- Gecko provider under `lib/ai/providers/gecko/`; shared `AiInferenceMutex`; async `EmbeddingQueueController` + foreground backfill
+- Schema: `Memory.embeddingModelVersion` (+ index); 768-d Gecko vectors
+- Search: Tier 1 keyword unchanged; Tier 2 semantic via `SemanticSearchProvider` + `HybridResultComposer`; UI “Possibly related”
+- Settings Gecko download/defer; opportunistic download after primary model ready
+- Threshold default 0.75 (prefs-tunable); full query-log recalibration → Phase 3.4 residual
+- QA artifact: `SPRINT3_3_QA.md`; probe: `lib/debug/embedding_rss_battery_probe_main.dart`
+- Pre-flight on AIN065 (debug): VmRSS +~250 MB on Gecko load; warm embed avg **292.9 ms**; dim=768; mutex required
+
+## Sprint 3 Phase 3.4 — Stabilization (in progress)
+
+- Harness: `lib/debug/phase34_stabilization_main.dart` (release on AIN065)
+- Threshold calibrated **0.70** (paraphrase min 0.734 / negative max 0.661); live query log empty
+- M1–M6, M8–M12, MUTEX_SOAK, TIER2_LATENCY (~220 ms): **PASS**
+- **M7 FAIL (P1):** warm extract avg **8575 ms** with Gemma+Gecko co-resident (RSS ~1.35 GB); RC gate ≤8000 ms; prior baseline ~6.3 s without Gecko
+- Enqueue-after-save still 0 ms — regression is extraction under co-residence, not persist
+- **Blocked:** product decision Conditional Pass (≤10 s) vs hold for unload-on-capture — do not tag `v0.5.0` until decided
+- No Sprint 4 work started
+
+## Sprint 3 Phase 3.4 — Stabilization (complete)
+
+- M7 fix: `GeckoInferenceAdapter.releaseResident()` before Gemma extract (inside mutex)
+- Re-measure release: warm extract avg **7163 ms** (≤8000) with Gecko previously resident → **PASS**
+- Full matrix M1–M12 + MUTEX_SOAK + TIER2_LATENCY: **PASS** (`PHASE34_VERDICT=PASS`)
+- Threshold 0.70; docs: `SPRINT3_3_QA.md`
+- **Ready for single git commit + `v0.5.0` tag** before Sprint 4 planning
+

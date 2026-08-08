@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_first_app/ai/providers/ai_provider_selection.dart';
 import 'package:my_first_app/features/settings/speech_locale_preferences.dart';
 import 'package:my_first_app/features/settings/speech_locale_resolver.dart';
+import 'package:my_first_app/features/settings/widgets/gecko_model_settings_tile.dart';
 
 /// Minimal Settings surface (Sprint 2B.4): speech language for transcription.
 ///
@@ -114,6 +115,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: _loading ? null : _changeSpeechLanguage,
           ),
+          const Divider(),
+          const GeckoModelSettingsTile(),
         ],
       ),
     );

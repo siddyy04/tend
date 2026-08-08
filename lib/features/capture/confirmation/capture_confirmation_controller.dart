@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:my_first_app/ai/providers/ai_provider_selection.dart';
 import 'package:my_first_app/ai/providers/extraction_provider.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/data/local/isar/collections/memory.dart';
@@ -226,6 +227,7 @@ class CaptureConfirmationController extends AsyncNotifier<void> {
 
       try {
         await ref.read(memoryRepositoryProvider).create(memory);
+        ref.read(embeddingEnqueueHookProvider).enqueue(memory.uuid);
         _emitDraft();
         return personUuid;
       } catch (e) {

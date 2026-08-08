@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:my_first_app/ai/inference/ai_inference_mutex.dart';
 import 'package:my_first_app/ai/providers/extraction_provider.dart';
 import 'package:my_first_app/ai/providers/litert/litert_inference_adapter.dart';
 import 'package:my_first_app/ai/providers/litert/litert_prompt_builder.dart';
@@ -15,10 +16,19 @@ class LiteRtExtractionProvider implements ExtractionProvider {
   LiteRtExtractionProvider({
     required this.adapter,
     this.promptBuilder = const LiteRtPromptBuilder(),
-  });
+    AiInferenceMutex? inferenceMutex,
+    Future<void> Function()? beforeInference,
+  })  : _mutex = inferenceMutex,
+        _beforeInference = beforeInference;
 
   final LiteRtInferenceAdapter adapter;
   final LiteRtPromptBuilder promptBuilder;
+  final AiInferenceMutex? _mutex;
+
+  /// Optional hook (e.g. release Gecko RAM) run inside the extraction lock,
+  /// immediately before LiteRT inference. Must not call embeddings.
+  final Future<void> Function()? _beforeInference;
+
 
   /// Soft-failure / empty debug detail for Capture (debug builds only).
   ///
@@ -56,11 +66,12 @@ class LiteRtExtractionProvider implements ExtractionProvider {
         );
       }
 
-      final rawCalls = await adapter.runFunctionCalls(
-        systemInstruction: bundle.systemInstruction,
-        userPrompt: bundle.userPrompt,
-        tools: bundle.tools,
-      );
+      final rawCalls = _mutex == null
+          ? await _runInference(bundle)
+          : await _mutex.withLock(
+              AiInferencePriority.extraction,
+              () => _runInference(bundle),
+            );
 
       final branch = adapter.lastDiagnostics?.parserBranch;
       if (branch == 'exception' || branch == 'no_tools_provided') {
@@ -424,5 +435,19 @@ class LiteRtExtractionProvider implements ExtractionProvider {
       return null;
     }
     return text;
+  }
+
+  Future<List<LiteRtRawFunctionCall>> _runInference(
+    LiteRtPromptBundle bundle,
+  ) async {
+    final before = _beforeInference;
+    if (before != null) {
+      await before();
+    }
+    return adapter.runFunctionCalls(
+      systemInstruction: bundle.systemInstruction,
+      userPrompt: bundle.userPrompt,
+      tools: bundle.tools,
+    );
   }
 }

@@ -688,13 +688,19 @@ Deferred from Sprint 1B:
 - Advanced Unicode / diacritic folding beyond casefold + trim
 - Isar `contains` prefilter if keyword scan latency exceeds ~300ms at larger corpora
 
-### Phase 3.3 semantic Search (gated — Conditional Go)
-**Priority:** High — **blocked on product confirmation** of ADR-013 / `SPRINT3_2_FINDINGS.md`
+### Phase 3.3 semantic Search — ~~gated~~ **implemented**
+**Priority:** Done (2026-08-08) — residuals tracked under Phase 3.4
 
-- Spike outcome: **Conditional Go** with dedicated **Gecko-110m-en** (not Gemma 4 E2B); keyword Search stays primary
-- Conditions before implement: `embeddingModelVersion` schema; public model download UX; additive hybrid ranking + no-match threshold; opportunistic backfill; no production `embeddingBackends` until wired
-- Acceptable alternative: stay keyword-only (Option 3) — no production rollback
-- Do **not** start Suggestion Engine here (Sprint 4)
+- Shipped: Gecko provider, versioned embeddings, async queue, foreground backfill, tiered hybrid UI, Settings download
+- Residual for 3.4: query-log threshold recalibration, RSS/battery probe numbers into ARCHITECTURE, mutex soak, capture-latency regression on production build
+
+### Phase 3.4 stabilization residuals
+**Priority:** High — next phase
+
+- Expand Tier 2 threshold calibration using `search_query_log_v1`
+- Document Gecko VmRSS / battery from `embedding_rss_battery_probe_main.dart`
+- E2E Typed/Voice/OCR/Share + Search soak; mutex under mixed load
+- Do **not** start Suggestion Engine until 3.4 handoff criteria (`SPRINT3_3.md` §23) met
 
 ### Activity log
 Maintain a timeline of actions such as:

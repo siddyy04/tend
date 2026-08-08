@@ -352,7 +352,7 @@ Sprint 2B needs multiple memories from one note. Two native FC shapes were spike
 ### ADR-013 — On-device embeddings: Conditional Go with Gecko (not Gemma 4 E2B)
 
 **Status**
-Accepted (draft from Phase 3.2 spike — product may confirm or descope Phase 3.3)
+Accepted (Phase 3.3 implemented)
 
 **Date**
 2026-08-08

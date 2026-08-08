@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:my_first_app/ai/providers/ai_provider_selection.dart';
 import 'package:my_first_app/core/constants/enums.dart';
 import 'package:my_first_app/core/constants/memory_defaults.dart';
 import 'package:my_first_app/data/local/isar/collections/memory.dart';
@@ -183,11 +184,14 @@ class MemoryFormController extends AsyncNotifier<void> {
           ..syncStatus = SyncStatus.pending
           ..deletedAt = null;
         await repo.create(memory);
+        ref.read(embeddingEnqueueHookProvider).enqueue(memory.uuid);
       } else {
         final memory = await repo.getByUuid(memoryUuid!);
         if (memory == null) {
           throw StateError('Memory not found: $memoryUuid');
         }
+        final textChanged = memory.eventText != trimmedEvent;
+        final categoryChanged = memory.category != selectedCategory;
         // Anchor relative resolution to original capture time, not wall-clock now.
         final persistedDateValue = resolveDateValueForPersistence(
           datePrecision: precision,
@@ -206,7 +210,15 @@ class MemoryFormController extends AsyncNotifier<void> {
           ..sensitivityFlag = sensitivity
           ..updatedAt = now
           ..syncStatus = SyncStatus.pending;
+        if (textChanged || categoryChanged) {
+          // Invalidate embedding until queue regenerates.
+          memory.embedding = null;
+          memory.embeddingModelVersion = null;
+        }
         await repo.update(memory);
+        if (textChanged || categoryChanged) {
+          ref.read(embeddingEnqueueHookProvider).enqueue(memory.uuid);
+        }
       }
 
       _emitDraft();

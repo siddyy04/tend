@@ -66,7 +66,9 @@ class Memory {
   late SourceType sourceType;
   String? sourceRef;                    // LOCAL file path (audio/photo) — never a cloud URL
   late bool needsUserConfirmation;
-  List<double>? embedding;              // local semantic search vector — dimension set by the active EmbeddingProvider, see note below
+  List<double>? embedding;              // Gecko-110m-en: 768-d float32 when present
+  @Index()
+  String? embeddingModelVersion;        // e.g. "gecko-110m-en-seq256-v1"; null = needs backfill
   late DateTime createdAt;
   late DateTime updatedAt;
   @enumerated
@@ -154,7 +156,9 @@ class Connection {
 Isar has a native relation feature (`IsarLink`/`IsarLinks`), but it's keyed to Isar's own local `Id` — which, per the ADR, is not sync-safe (two devices can generate colliding integers independently). Every relation in this schema is therefore a plain `String` field holding the related record's `uuid`, resolved with an explicit query rather than Isar's built-in link traversal. This costs a little convenience (no automatic link loading) in exchange for the relation actually surviving a sync round-trip.
 
 ### Embedding dimension
-`Memory.embedding` has no fixed dimension in this schema — it's whatever the active `EmbeddingProvider` implementation produces (Gemma 3n's embedding output for the initial implementation). **Do not hardcode a dimension in application code that assumes Gemma specifically** — if the provider is ever swapped (per `ARCHITECTURE.md` Section 6), a differently-sized embedding must not silently corrupt similarity comparisons against old vectors. See "Remaining gaps" in the review below — this needs an explicit re-embed migration strategy, which isn't fully designed yet.
+`Memory.embedding` is produced by the active `EmbeddingProvider` — Phase 3.3 production provider is **Gecko-110m-en** (**768** dimensions). Persist `embeddingModelVersion` (e.g. `gecko-110m-en-seq256-v1`) with every vector. **Never compare embeddings across different versions or dimensions.** Stale / null version → exclude from Tier 2 semantic search until backfill re-embeds. Dimension is not stored per row.
+
+Search is **tiered hybrid** (Phase 3.3): Tier 1 = keyword (unchanged from Phase 3.1); Tier 2 = semantic-only matches above a tunable cosine threshold. See `SPRINT3_3.md` / ADR-013.
 
 ---
 

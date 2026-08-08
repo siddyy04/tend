@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_first_app/ai/model_manager/device_capability_check.dart';
+import 'package:my_first_app/ai/model_manager/embedding_model_manager.dart';
 import 'package:my_first_app/ai/model_manager/model_download_manager.dart';
 
 final deviceCapabilityCheckProvider = Provider<DeviceCapabilityCheck>((ref) {
@@ -9,6 +10,13 @@ final deviceCapabilityCheckProvider = Provider<DeviceCapabilityCheck>((ref) {
 final modelDownloadManagerProvider = Provider<ModelDownloadManager>((ref) {
   ref.keepAlive();
   return ModelDownloadManager();
+});
+
+final embeddingModelManagerProvider = Provider<EmbeddingModelManager>((ref) {
+  ref.keepAlive();
+  return EmbeddingModelManager(
+    downloadManager: ref.watch(modelDownloadManagerProvider),
+  );
 });
 
 /// Device AI tier from RAM assessment.

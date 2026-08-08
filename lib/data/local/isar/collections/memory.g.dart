@@ -54,70 +54,75 @@ const MemorySchema = CollectionSchema(
       name: r'embedding',
       type: IsarType.doubleList,
     ),
-    r'eventText': PropertySchema(
+    r'embeddingModelVersion': PropertySchema(
       id: 7,
+      name: r'embeddingModelVersion',
+      type: IsarType.string,
+    ),
+    r'eventText': PropertySchema(
+      id: 8,
       name: r'eventText',
       type: IsarType.string,
     ),
     r'extractionConfidence': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'extractionConfidence',
       type: IsarType.double,
     ),
     r'importanceScore': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'importanceScore',
       type: IsarType.long,
     ),
     r'needsUserConfirmation': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'needsUserConfirmation',
       type: IsarType.bool,
     ),
     r'personMatchConfidence': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'personMatchConfidence',
       type: IsarType.double,
     ),
     r'personUuid': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'personUuid',
       type: IsarType.string,
     ),
     r'quoteEvidence': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'quoteEvidence',
       type: IsarType.string,
     ),
     r'sensitivityFlag': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'sensitivityFlag',
       type: IsarType.byte,
       enumMap: _MemorysensitivityFlagEnumValueMap,
     ),
     r'sourceRef': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'sourceRef',
       type: IsarType.string,
     ),
     r'sourceType': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'sourceType',
       type: IsarType.byte,
       enumMap: _MemorysourceTypeEnumValueMap,
     ),
     r'syncStatus': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'syncStatus',
       type: IsarType.byte,
       enumMap: _MemorysyncStatusEnumValueMap,
     ),
     r'updatedAt': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
-    r'uuid': PropertySchema(id: 19, name: r'uuid', type: IsarType.string),
+    r'uuid': PropertySchema(id: 20, name: r'uuid', type: IsarType.string),
   },
 
   estimateSize: _memoryEstimateSize,
@@ -178,6 +183,19 @@ const MemorySchema = CollectionSchema(
         ),
       ],
     ),
+    r'embeddingModelVersion': IndexSchema(
+      id: 1779734734228596330,
+      name: r'embeddingModelVersion',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'embeddingModelVersion',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+      ],
+    ),
   },
   links: {},
   embeddedSchemas: {},
@@ -204,6 +222,12 @@ int _memoryEstimateSize(
     final value = object.embedding;
     if (value != null) {
       bytesCount += 3 + value.length * 8;
+    }
+  }
+  {
+    final value = object.embeddingModelVersion;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
     }
   }
   bytesCount += 3 + object.eventText.length * 3;
@@ -237,19 +261,20 @@ void _memorySerialize(
   writer.writeString(offsets[4], object.dateValueRaw);
   writer.writeDateTime(offsets[5], object.deletedAt);
   writer.writeDoubleList(offsets[6], object.embedding);
-  writer.writeString(offsets[7], object.eventText);
-  writer.writeDouble(offsets[8], object.extractionConfidence);
-  writer.writeLong(offsets[9], object.importanceScore);
-  writer.writeBool(offsets[10], object.needsUserConfirmation);
-  writer.writeDouble(offsets[11], object.personMatchConfidence);
-  writer.writeString(offsets[12], object.personUuid);
-  writer.writeString(offsets[13], object.quoteEvidence);
-  writer.writeByte(offsets[14], object.sensitivityFlag.index);
-  writer.writeString(offsets[15], object.sourceRef);
-  writer.writeByte(offsets[16], object.sourceType.index);
-  writer.writeByte(offsets[17], object.syncStatus.index);
-  writer.writeDateTime(offsets[18], object.updatedAt);
-  writer.writeString(offsets[19], object.uuid);
+  writer.writeString(offsets[7], object.embeddingModelVersion);
+  writer.writeString(offsets[8], object.eventText);
+  writer.writeDouble(offsets[9], object.extractionConfidence);
+  writer.writeLong(offsets[10], object.importanceScore);
+  writer.writeBool(offsets[11], object.needsUserConfirmation);
+  writer.writeDouble(offsets[12], object.personMatchConfidence);
+  writer.writeString(offsets[13], object.personUuid);
+  writer.writeString(offsets[14], object.quoteEvidence);
+  writer.writeByte(offsets[15], object.sensitivityFlag.index);
+  writer.writeString(offsets[16], object.sourceRef);
+  writer.writeByte(offsets[17], object.sourceType.index);
+  writer.writeByte(offsets[18], object.syncStatus.index);
+  writer.writeDateTime(offsets[19], object.updatedAt);
+  writer.writeString(offsets[20], object.uuid);
 }
 
 Memory _memoryDeserialize(
@@ -270,26 +295,27 @@ Memory _memoryDeserialize(
   object.dateValueRaw = reader.readStringOrNull(offsets[4]);
   object.deletedAt = reader.readDateTimeOrNull(offsets[5]);
   object.embedding = reader.readDoubleList(offsets[6]);
-  object.eventText = reader.readString(offsets[7]);
-  object.extractionConfidence = reader.readDoubleOrNull(offsets[8]);
+  object.embeddingModelVersion = reader.readStringOrNull(offsets[7]);
+  object.eventText = reader.readString(offsets[8]);
+  object.extractionConfidence = reader.readDoubleOrNull(offsets[9]);
   object.id = id;
-  object.importanceScore = reader.readLong(offsets[9]);
-  object.needsUserConfirmation = reader.readBool(offsets[10]);
-  object.personMatchConfidence = reader.readDoubleOrNull(offsets[11]);
-  object.personUuid = reader.readString(offsets[12]);
-  object.quoteEvidence = reader.readStringOrNull(offsets[13]);
+  object.importanceScore = reader.readLong(offsets[10]);
+  object.needsUserConfirmation = reader.readBool(offsets[11]);
+  object.personMatchConfidence = reader.readDoubleOrNull(offsets[12]);
+  object.personUuid = reader.readString(offsets[13]);
+  object.quoteEvidence = reader.readStringOrNull(offsets[14]);
   object.sensitivityFlag =
-      _MemorysensitivityFlagValueEnumMap[reader.readByteOrNull(offsets[14])] ??
+      _MemorysensitivityFlagValueEnumMap[reader.readByteOrNull(offsets[15])] ??
       SensitivityLevel.low;
-  object.sourceRef = reader.readStringOrNull(offsets[15]);
+  object.sourceRef = reader.readStringOrNull(offsets[16]);
   object.sourceType =
-      _MemorysourceTypeValueEnumMap[reader.readByteOrNull(offsets[16])] ??
+      _MemorysourceTypeValueEnumMap[reader.readByteOrNull(offsets[17])] ??
       SourceType.voice;
   object.syncStatus =
-      _MemorysyncStatusValueEnumMap[reader.readByteOrNull(offsets[17])] ??
+      _MemorysyncStatusValueEnumMap[reader.readByteOrNull(offsets[18])] ??
       SyncStatus.pending;
-  object.updatedAt = reader.readDateTime(offsets[18]);
-  object.uuid = reader.readString(offsets[19]);
+  object.updatedAt = reader.readDateTime(offsets[19]);
+  object.uuid = reader.readString(offsets[20]);
   return object;
 }
 
@@ -319,38 +345,40 @@ P _memoryDeserializeProp<P>(
     case 6:
       return (reader.readDoubleList(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 9:
-      return (reader.readLong(offset)) as P;
-    case 10:
-      return (reader.readBool(offset)) as P;
-    case 11:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 12:
-      return (reader.readString(offset)) as P;
-    case 13:
       return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 10:
+      return (reader.readLong(offset)) as P;
+    case 11:
+      return (reader.readBool(offset)) as P;
+    case 12:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 13:
+      return (reader.readString(offset)) as P;
     case 14:
+      return (reader.readStringOrNull(offset)) as P;
+    case 15:
       return (_MemorysensitivityFlagValueEnumMap[reader.readByteOrNull(
                 offset,
               )] ??
               SensitivityLevel.low)
           as P;
-    case 15:
-      return (reader.readStringOrNull(offset)) as P;
     case 16:
+      return (reader.readStringOrNull(offset)) as P;
+    case 17:
       return (_MemorysourceTypeValueEnumMap[reader.readByteOrNull(offset)] ??
               SourceType.voice)
           as P;
-    case 17:
+    case 18:
       return (_MemorysyncStatusValueEnumMap[reader.readByteOrNull(offset)] ??
               SyncStatus.pending)
           as P;
-    case 18:
-      return (reader.readDateTime(offset)) as P;
     case 19:
+      return (reader.readDateTime(offset)) as P;
+    case 20:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -913,6 +941,88 @@ extension MemoryQueryWhere on QueryBuilder<Memory, Memory, QWhereClause> {
           includeUpper: includeUpper,
         ),
       );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterWhereClause>
+  embeddingModelVersionIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'embeddingModelVersion',
+          value: [null],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterWhereClause>
+  embeddingModelVersionIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'embeddingModelVersion',
+          lower: [null],
+          includeLower: false,
+          upper: [],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterWhereClause> embeddingModelVersionEqualTo(
+    String? embeddingModelVersion,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'embeddingModelVersion',
+          value: [embeddingModelVersion],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterWhereClause>
+  embeddingModelVersionNotEqualTo(String? embeddingModelVersion) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'embeddingModelVersion',
+                lower: [],
+                upper: [embeddingModelVersion],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'embeddingModelVersion',
+                lower: [embeddingModelVersion],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'embeddingModelVersion',
+                lower: [embeddingModelVersion],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'embeddingModelVersion',
+                lower: [],
+                upper: [embeddingModelVersion],
+                includeUpper: false,
+              ),
+            );
+      }
     });
   }
 }
@@ -1547,6 +1657,168 @@ extension MemoryQueryFilter on QueryBuilder<Memory, Memory, QFilterCondition> {
         includeLower,
         upper,
         includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'embeddingModelVersion'),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'embeddingModelVersion'),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'embeddingModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'embeddingModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'embeddingModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'embeddingModelVersion',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'embeddingModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'embeddingModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'embeddingModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'embeddingModelVersion',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'embeddingModelVersion', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterFilterCondition>
+  embeddingModelVersionIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'embeddingModelVersion',
+          value: '',
+        ),
       );
     });
   }
@@ -2941,6 +3213,18 @@ extension MemoryQuerySortBy on QueryBuilder<Memory, Memory, QSortBy> {
     });
   }
 
+  QueryBuilder<Memory, Memory, QAfterSortBy> sortByEmbeddingModelVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'embeddingModelVersion', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterSortBy> sortByEmbeddingModelVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'embeddingModelVersion', Sort.desc);
+    });
+  }
+
   QueryBuilder<Memory, Memory, QAfterSortBy> sortByEventText() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'eventText', Sort.asc);
@@ -3171,6 +3455,18 @@ extension MemoryQuerySortThenBy on QueryBuilder<Memory, Memory, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Memory, Memory, QAfterSortBy> thenByEmbeddingModelVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'embeddingModelVersion', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Memory, Memory, QAfterSortBy> thenByEmbeddingModelVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'embeddingModelVersion', Sort.desc);
+    });
+  }
+
   QueryBuilder<Memory, Memory, QAfterSortBy> thenByEventText() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'eventText', Sort.asc);
@@ -3385,6 +3681,17 @@ extension MemoryQueryWhereDistinct on QueryBuilder<Memory, Memory, QDistinct> {
     });
   }
 
+  QueryBuilder<Memory, Memory, QDistinct> distinctByEmbeddingModelVersion({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'embeddingModelVersion',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
   QueryBuilder<Memory, Memory, QDistinct> distinctByEventText({
     bool caseSensitive = true,
   }) {
@@ -3524,6 +3831,13 @@ extension MemoryQueryProperty on QueryBuilder<Memory, Memory, QQueryProperty> {
   QueryBuilder<Memory, List<double>?, QQueryOperations> embeddingProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'embedding');
+    });
+  }
+
+  QueryBuilder<Memory, String?, QQueryOperations>
+  embeddingModelVersionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'embeddingModelVersion');
     });
   }
 

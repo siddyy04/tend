@@ -8,6 +8,7 @@ import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
 import 'package:my_first_app/ai/model_manager/model_catalog.dart';
 import 'package:my_first_app/ai/model_manager/model_download_manager.dart';
 import 'package:my_first_app/ai/providers/litert/litert_prompt_builder.dart';
+import 'package:my_first_app/ai/runtime/tend_gemma_bootstrap.dart';
 
 bool _liteRtRuntimeInitialized = false;
 
@@ -17,13 +18,18 @@ void ensureLiteRtRuntimeInitialized() {
     return;
   }
   _liteRtRuntimeInitialized = true;
-  unawaited(
-    FlutterGemma.initialize(inferenceEngines: const [LiteRtLmEngine()]),
-  );
+  unawaited(_ensureInitialized());
 }
 
 Future<void> _ensureInitialized() async {
-  await FlutterGemma.initialize(inferenceEngines: const [LiteRtLmEngine()]);
+  // Prefer Gecko-aware bootstrap (registers embedding backends) when Phase 3.3
+  // has installed it — keeps flutter_gemma_embeddings out of this file.
+  final bootstrap = tendGemmaBootstrap;
+  if (bootstrap != null) {
+    await bootstrap();
+  } else {
+    await FlutterGemma.initialize(inferenceEngines: const [LiteRtLmEngine()]);
+  }
   _liteRtRuntimeInitialized = true;
 }
 

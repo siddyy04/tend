@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide SearchController;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_first_app/ai/providers/ai_provider_selection.dart';
 import 'package:my_first_app/ai/providers/search/search_provider.dart';
 import 'package:my_first_app/app/app_routes.dart';
 import 'package:my_first_app/features/person_profile/person_profile_screen.dart';
@@ -94,8 +95,8 @@ class _SearchViewState extends ConsumerState<SearchView> {
           child: Text(error.toString(), textAlign: TextAlign.center),
         ),
       ),
-      data: (hits) {
-        if (hits.isEmpty && ui.hasCompletedSearch) {
+      data: (hybrid) {
+        if (hybrid.isEmpty && ui.hasCompletedSearch && !ui.tier2Loading) {
           if (ui.corpusEmpty) {
             return SearchEmptyState(
               kind: SearchEmptyKind.noCorpus,
@@ -118,9 +119,18 @@ class _SearchViewState extends ConsumerState<SearchView> {
           );
         }
 
+        if (hybrid.isEmpty && ui.tier2Loading) {
+          return Semantics(
+            liveRegion: true,
+            label: 'Finding related memories',
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
         return SearchResultsList(
-          hits: hits,
+          result: hybrid,
           showPersonAttribution: showPerson,
+          tier2Loading: ui.tier2Loading,
           onHitTap: (hit, index) {
             controller.onResultTapped(hit, index);
             context.openPersonProfile(hit.personUuid);
@@ -137,6 +147,8 @@ class SearchScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Opportunistic Gecko download after primary model is ready (non-blocking).
+    ref.watch(geckoOpportunisticDownloadProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Search')),
       body: const SearchView(args: SearchControllerArgs.global()),

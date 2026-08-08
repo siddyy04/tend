@@ -10,11 +10,14 @@ class SearchResultTile extends StatelessWidget {
     required this.hit,
     required this.showPersonAttribution,
     required this.onTap,
+    this.possiblyRelated = false,
   });
 
   final SearchHit hit;
   final bool showPersonAttribution;
   final VoidCallback onTap;
+  final bool possiblyRelated;
+
 
   String _dateLabel() {
     if (hit.dateValue != null) {
@@ -32,8 +35,8 @@ class SearchResultTile extends StatelessWidget {
     final meta =
         '${memoryCategoryLabel(hit.category)} · ${_dateLabel()}';
     final semanticLabel = showPersonAttribution
-        ? '${hit.personName}. ${hit.snippet}. $meta'
-        : '${hit.snippet}. $meta';
+        ? '${possiblyRelated ? "Possibly related. " : ""}${hit.personName}. ${hit.snippet}. $meta'
+        : '${possiblyRelated ? "Possibly related. " : ""}${hit.snippet}. $meta';
 
     return Semantics(
       button: true,
