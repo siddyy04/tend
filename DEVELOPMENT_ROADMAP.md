@@ -1,103 +1,107 @@
 # Tend — Development Roadmap (Cursor / Flutter build order)
 
-**Supersedes:** `03-development-roadmap.md`. Aligned to `ARCHITECTURE.md` (ADR-0001).
-**How to use this with Cursor:** work through this sprint by sprint — copy only that sprint's section into a Cursor prompt (e.g. *"Implement Sprint 1A exactly as scoped below, using SCHEMA.md and FEATURES.md as the source of truth"* — or Sprint 1B / Sprint 2 as appropriate). Each sprint is independently shippable and testable before moving to the next.
+**Status:** Living roadmap — last aligned **pre–Sprint 4** (after Sprint 3 Search close-out / docs sync).  
+**Authoritative for day-to-day status:** [`CURSOR_HANDOFF.md`](CURSOR_HANDOFF.md). Binding architecture / schema / features: `ARCHITECTURE.md`, `SCHEMA.md`, `FEATURES.md`. Per-sprint specs win for historical “what was in scope” detail.
 
-**Stack (per ADR-0001 / ADR-011 / ADR-013):** Flutter, `isar_community` (local source of truth), `flutter_riverpod` + `riverpod_generator`, `go_router`, `flutter_gemma` + `flutter_gemma_litertlm` (Gemma 4 extraction via `LiteRtInferenceAdapter` only), `flutter_gemma_embeddings` (Gecko embeddings via `GeckoInferenceAdapter` only), `supabase_flutter` (auth + optional backup), `workmanager` (background sync + Suggestion Engine). Repo organized feature-first per `ARCHITECTURE.md` Section 2. Collection fields: **`SCHEMA.md` only**.
+**How to use this with Cursor:** treat this file as the **sequence and status map**. For implementation work, open the binding sprint spec for that slice (e.g. `SPRINT3_3.md`), not only this summary. Do not implement a future sprint until its Cursor-facing spec exists and is approved.
 
-**What changed from the original roadmap:** the core sprint order is preserved almost exactly, per your instruction — but **sync is now its own dedicated sprint (Sprint 5)** rather than a "harden the offline queue" line item folded into polish. Local-first sync with conflict resolution is genuinely new engineering scope the original cloud-primary design never had, and it deserves its own scoped, testable unit rather than being squeezed in at the end. **Sprint 1 is also split into Sprint 1A (Person CRUD) and Sprint 1B (manual Memory CRUD + Person Profile)** so each is independently shippable while preserving the original "validate schema before AI" intent. Everything else — dependency logic, what ships when — is unchanged in spirit.
-
----
-
-## Sprint 0 — Project Setup ✅ Done
-**Goal:** an empty but real app — auth works, local schema is live, navigation shell exists.
-- Flutter project scaffold; add `isar_community`, `flutter_riverpod`, `riverpod_generator`, `go_router`, `supabase_flutter`.
-- Define the Isar collections and enums exactly as specified in `SCHEMA.md`; run codegen; open the local Isar instance behind a Riverpod provider.
-- Create the Supabase project for **auth only** at this stage — the backup mirror schema is only needed once Sprint 5 begins.
-- Auth screens: sign up / log in (email or phone OTP via Supabase Auth).
-- App shell: bottom nav or drawer with My Circle / Today / Search stubs, using `go_router`.
-- **Done when:** a user can sign up, log in, and see an empty "My Circle" screen backed by a real (empty) local Isar collection — no network dependency beyond the auth call itself.
-
-## Sprint 1A — Person CRUD (no memories, no AI) ✅ Done
-**Goal:** ship a complete people layer against Isar before adding memory complexity.
-- `PersonRepository` + Riverpod providers/streams (Isar watchers); nothing above the repository touches Isar directly (`ARCHITECTURE.md`).
-- My Circle list grouped by `circleTier`, including a correct empty state when no people exist.
-- Add Person / Edit Person screens: name, circle tier, relationship type; client-generated `uuid`; `syncStatus = pending`; `createdAt` / `updatedAt` set correctly.
-- Delete Person via `deletedAt` tombstone (not a hard delete); exclude tombstoned people from My Circle.
-- Form validation (required name, valid circle tier, etc.).
-- **Out of scope for 1A:** Person Profile, any Memory UI/repository, AI, sync.
-- **Done when:** a user can add, edit, delete, and list people entirely offline with data persisting in Isar, and My Circle shows a proper empty state when appropriate.
-
-## Sprint 1B — Manual Memory CRUD + Person Profile (no AI) ✅ Done
-**Goal:** validate the Memory data model end to end with hand-entered data before wiring capture/AI.
-- `MemoryRepository` + Riverpod providers; FK by `personUuid` only (no `IsarLink`).
-- Person Profile screen: timeline of that person's memories (newest first), empty state when none.
-- Manual Add/Edit/Delete Memory: category, event text, optional date fields per `SCHEMA.md`; no AI extraction; `extractionConfidence` left null for manual entry.
-- Routing: navigate from My Circle → Person Profile; memory forms reachable from the profile.
-- **Person delete cascade:** originally listed here for `FEATURES.md` acceptance, but **explicitly deferred** after Sprint 1B planning — not implemented in 1B. Tracked in `BACKLOG.md`; schedule with data-controls work (e.g. Sprint 6) unless re-prioritized earlier.
-- **Out of scope for 1B:** AI providers, capture modal, embeddings, Today's Opportunities logic, person→memory cascade.
-- **Done when:** a user can open a person, manually log/edit/delete memories on a timeline, entirely offline, with persistence correct in Isar. Zero AI — deliberately catching data-model problems while they're cheap to fix.
-
-## Sprint 2 — On-Device Capture + AI Extraction
-**Goal:** the actual core loop — capture in under 10 seconds, entirely on-device, user confirms.
-
-> **Supersession (executed path):** Concrete extraction is `LiteRtExtractionProvider` + **Gemma 4 E2B** (ADR-010/011). Embeddings are **not** built in Sprint 2 — Phase 3.3 ships `GeckoEmbeddingProvider` via `flutter_gemma_embeddings` (ADR-013). Historical “GemmaExtractionProvider / GemmaEmbeddingProvider via flutter_gemma” wording below is obsolete for the production stack.
-
-- Implement the `ExtractionProvider`, `EmbeddingProvider`, `TranscriptionProvider`, `OCRProvider` abstract interfaces (`ARCHITECTURE.md` Section 6) before writing any concrete implementation — this is what keeps the app decoupled from a specific vendor model.
-- **Model management first:** device capability check (`device_info_plus`), tiered behavior, on-demand model download flow with checksum verification, and the `ManualFallbackProvider` for unsupported devices — build this *before* the extraction UI, so every subsequent screen can assume graceful degradation exists rather than bolting it on after.
-- Implement concrete extraction behind the LiteRT adapter (catalog-selected Gemma 4); do **not** route embeddings through the LLM package — see ADR-013 / Sprint 3 for Gecko.
-- Implement `PlatformTranscriptionProvider` (native speech-to-text) and `PlatformOCRProvider` (native on-device text recognition) — these do not touch `flutter_gemma` / `flutter_gemma_embeddings` at all.
-- Global capture modal: voice (default), text, photo, OS share-sheet entry points.
-- Confirmation card: editable fields, respects `needsUserConfirmation` and the confidence thresholds — never auto-saves below threshold.
-- **Done when:** a user can go from opening the app to a saved, AI-structured memory in under 10 seconds including the confirmation tap — for both voice and text, entirely offline — and a user on a simulated low-RAM device instead lands cleanly in manual-entry mode with no crash or dead end.
-
-## Sprint 3 — Today's Opportunities (Suggestion Engine v1)
-**Goal:** the resurfacing half of the magic loop, computed entirely locally.
-
-> **Supersession (executed path):** Product Sprint **3** delivered **Search** (Phases 3.1–3.4). Suggestion Engine is the **next** planning target (product Sprint 4). Keep the bullets below as Suggestion Engine scope when that sprint is specified — do not treat this section’s number as the live sequence.
-
-- Implement the rule-based scoring logic (unchanged from the original design) as a `workmanager` scheduled background task querying Isar directly — no cloud job, no network dependency.
-- Today's Opportunities screen: hard cap of 5, each item shows its "why this surfaced" line, act/dismiss/not-now actions writing to `SuggestionLogEntry`.
-- Local push notifications for the daily digest (`flutter_local_notifications`).
-- Enforce the hard exclusion rules in code: no suggestion without a grounding memory, no batch/productivity framing, no fabricated emotional language.
-- **Done when:** a user reliably receives a short, specific daily digest with the device fully offline, and dismissed/acted items correctly stop reappearing per the suppression logic.
-
-## Sprint 4 — Local Semantic Search
-**Goal:** on-demand recall, computed entirely on-device.
-
-> **Supersession:** In the executed roadmap, **Search shipped as Sprint 3** (Phases 3.1–3.4: keyword + optional Gecko Tier 2). This section’s original numbering is historical. Sprint 4 planning going forward targets the **Suggestion Engine** (see `CURSOR_HANDOFF.md` / `SPRINT3.md`). Do not re-implement Search here.
-
-- *(Historical intent)* Embeddings + person-scoped/global NL search via brute-force cosine — **done in Sprint 3.3** with async post-persist embed, `embeddingModelVersion`, mutex + `releaseResident()`.
-- **Done when (Search):** plain-language recall with sourced memories offline — **met for v0.5.0**.
-
-
-## Sprint 5 — Sync Engine *(new — see "what changed" above)*
-**Goal:** opt-in backup/multi-device sync, without ever becoming a dependency for core function.
-- Stand up the Supabase backup mirror schema from `SCHEMA.md`.
-- Build the push path: query Isar for `syncStatus == pending`, upsert to Supabase by `uuid`, mark `synced` on success.
-- Build the pull path: query Supabase for records with `updatedAt` newer than `lastSyncedAt`, upsert into Isar by `uuid`.
-- Implement last-write-wins conflict resolution by `updatedAt`, and tombstone-based deletes (`deletedAt`) rather than hard deletes at sync time.
-- Settings toggle: enable/disable sync, defaulting to **OFF**. Enabling triggers a full initial push of local data.
-- **Done when:** a user can enable sync, see their data appear on a second device, disable sync again with all local data fully intact, and force-kill the app mid-sync without corrupting local state.
-
-## Sprint 6 — Data Controls, Encryption, and Polish
-**Goal:** MVP feature-complete and trustworthy enough for a closed beta.
-- Local encryption for the Isar database file (verify actual support in `isar_community` at implementation time) and `flutter_secure_storage` for auth tokens/keys.
-- Data export (full JSON dump) and delete flows (person/memory/account) with correct cascading tombstones, propagating through sync if enabled.
-- Empty states, error handling, onboarding polish (including the model-download step from Sprint 2).
-- **Done when:** the app matches every P0 acceptance criterion in `FEATURES.md`.
+**Stack (ADR-0001 / ADR-011 / ADR-013):** Flutter · `isar_community` (local SoT) · `flutter_riverpod` · `go_router` · `flutter_gemma` + `flutter_gemma_litertlm` (Gemma 4 extraction via `LiteRtInferenceAdapter` only) · `flutter_gemma_embeddings` (Gecko via `GeckoInferenceAdapter` only) · `supabase_flutter` (auth + optional backup) · `workmanager` (future sync + Suggestion Engine). Collection fields: **`SCHEMA.md` only**.
 
 ---
 
-## Sprint 7+ (P1 — only after MVP beta validates the core loop)
-Pull from the P1 list in `FEATURES.md`: Connection layer, calendar integration, email forwarding capture, shared/family circles (requires revisiting last-write-wins — see gaps below), learned suggestion weighting, and the fine-tuned FunctionGemma provider swap once real capture data exists to fine-tune on.
+## Current position
+
+| Item | State |
+|---|---|
+| Milestone | **`v0.5.0`** — Capture RC + hybrid Search (Phase 3.4 PASS). Commit/tag when asked. |
+| Shipped | Sprint 0 → 1A → 1B → 2A/2B (Capture) → Foundation Cleanup → Sprint 3 Search (3.1–3.4) |
+| Next | **Sprint 4 — Suggestion Engine / Today's Opportunities** — **planning only** until a Sprint 4 spec is approved |
+| Later | Sprint 5 Sync → Sprint 6 Data controls / polish → P1 |
+
+**Why Search before Suggestion Engine:** early beta has few memories old enough for resurfacing payoff; Search delivers value in the same session as capture. Search-query logs also inform what is worth suggesting later. See [`SPRINT3.md`](SPRINT3.md) §0. (Original Bible order had Suggestion Engine as Sprint 3 — deliberately swapped.)
 
 ---
 
-## Dependency notes (why this order, specifically)
-- **Sprint 1A before Sprint 1B:** prove Person persistence, list grouping, and tombstone delete before introducing Memory FKs and the profile timeline.
-- **Sprint 1B before Sprint 2:** find Memory data-model problems with a boring manual form before wiring up on-device inference on top of it.
-- **Sprint 2 before Sprint 3:** the Suggestion Engine has nothing to rank without real captured memories.
-- **Sprint 2's model management before its extraction UI:** graceful degradation needs to be a foundation every later screen can assume, not a retrofit.
-- **Sprint 3 before Sprint 4:** Today's Opportunities is the retention loop and the core promise; search is valuable but not what makes or breaks the "wow, you remembered" moment.
-- **Sprint 5 (sync) before Sprint 6 (polish):** encryption and export/delete need to account for the sync path (propagating tombstones, encrypting the backup mirror consistently) — building them before sync exists risks redoing them once it does.
+## Executed sequence (done)
+
+### Sprint 0 — Project Setup ✅
+Auth (Supabase), Isar schema from `SCHEMA.md`, navigation shell (My Circle / Today / Search stubs). Spec: `SPRINT0.md`.
+
+### Sprint 1A — Person CRUD ✅
+My Circle, Person add/edit/soft-delete, no memories/AI. Spec: `SPRINT1A.md`.
+
+### Sprint 1B — Manual Memory CRUD + Person Profile ✅
+Timeline + manual memory forms; person→memory cascade **deferred** (`BACKLOG.md`). Spec: `SPRINT1B.md`.
+
+### Sprint 2 — On-Device Capture + AI Extraction ✅
+Split into **2A** (text capture + LiteRT extraction + confirmation) and **2B.1–2B.8** (multi-memory, Create Person, voice/OCR/share, clarification, Capture RC).
+
+| Slice | Outcome |
+|---|---|
+| Production extraction | `LiteRtExtractionProvider` + **Gemma 4 E2B** (LiteRT-LM); optional E4B in catalog (ADR-010/011) |
+| Capture modes | Typed, Voice (platform STT), OCR (ML Kit), Share → shared `CaptureSubmitFlow` |
+| RC | **Go** — [`RELEASE_READINESS_REPORT.md`](RELEASE_READINESS_REPORT.md) |
+| Specs | `SPRINT2A.md`, `SPRINT2B.md` … `SPRINT2B8.md` |
+
+Embeddings were **not** part of Sprint 2 (interface only until Sprint 3).
+
+### Foundation Cleanup (pre–Sprint 3) ✅
+`FollowUp.deletedAt` schema alignment; `PersonRepository.getByUuid` soft-delete filter; relative-date resolution + backfill. See `FOUNDATION_CLEANUP.md`.
+
+### Sprint 3 — Local Search (keyword → hybrid) ✅ → `v0.5.0`
+Phases (keyword-first, then semantic) per [`SPRINT3.md`](SPRINT3.md):
+
+| Phase | What shipped | Spec / artifact |
+|---|---|---|
+| **3.1** | Global + person-scoped **keyword** Search; `SearchProvider`; query log | `SPRINT3_1.md` |
+| **3.2** | Embedding spike → **Conditional Go** for **Gecko-110m-en** (not Gemma 4 embed) | `SPRINT3_2.md`, `SPRINT3_2_FINDINGS.md`, ADR-013 |
+| **3.3** | Tiered hybrid: keyword Tier 1 + Gecko Tier 2; async embed queue; backfill; mutex | `SPRINT3_3.md`, `SPRINT3_3_IMPLEMENTATION.md` |
+| **3.4** | Stabilization PASS; threshold **0.70**; M7 via `releaseResident()` before extract | `SPRINT3_3_QA.md` |
+
+**Out of Sprint 3 (intentional):** Suggestion Engine, FollowUp creation from capture, sync, ANN indexes.
+
+---
+
+## Upcoming sequence (not started)
+
+### Sprint 4 — Suggestion Engine / Today's Opportunities 🔜 Next
+**Goal:** resurfacing half of the magic loop — local, rule-based, offline.
+
+**Status:** Planning only. No implementation until a Cursor-facing Sprint 4 spec is written and approved (mirror `SPRINT3.md` → phase specs).
+
+**Intended scope (from original design / `FEATURES.md` — refine in the Sprint 4 spec):**
+- Rule-based scoring as a local scheduled task (`workmanager`) over Isar — no cloud job
+- Today's Opportunities UI: hard cap of 5; “why this surfaced”; act / dismiss / not-now → `SuggestionLogEntry`
+- Local push notifications for the daily digest (`flutter_local_notifications`)
+- Hard exclusions: no suggestion without a grounding memory; no batch/productivity framing; no fabricated emotional language
+- Product design still open: **when does a Memory generate a FollowUp?** — deferred through Sprints 2–3 on purpose
+
+**Inputs that should shape the spec:** real capture patterns, relative-date behavior, and Sprint 3 **search-query logs** (what people try to recall).
+
+**Done when:** a short, specific daily digest works fully offline; dismissed/acted items stop reappearing per suppression rules.
+
+### Sprint 5 — Sync Engine
+Opt-in backup / multi-device sync (default **OFF**). Supabase mirror from `SCHEMA.md`; push/pull by `uuid`; last-write-wins on `updatedAt`; tombstone deletes. Enabling sync must never block core capture/search.
+
+### Sprint 6 — Data Controls, Encryption, and Polish
+Isar encryption (verify `isar_community` support), `flutter_secure_storage`, export/delete (including **person→memory cascade** from `BACKLOG.md`), empty states, onboarding polish. **Done when:** every P0 acceptance criterion in `FEATURES.md` is met.
+
+### Sprint 7+ (P1 — after MVP beta validates the core loop)
+From `FEATURES.md` P1: Connection layer, calendar, email forwarding, shared circles (implies revisiting last-write-wins), learned suggestion weighting, vision captioning, fine-tuned small function-caller swap once real extraction examples exist.
+
+---
+
+## Dependency notes (why this order)
+
+- **1A → 1B → 2:** prove Person, then Memory, then AI on top of a stable model (ADR-009 manual-first).
+- **2 model management before extraction UI:** graceful degradation is foundation, not retrofit.
+- **2 before 3 (Search):** search over an empty corpus demonstrates nothing.
+- **3 (Search) before 4 (Suggestion Engine):** early-usage value + calibration data before proactive resurfacing (`SPRINT3.md` §0).
+- **4 before 5:** retention loop does not require sync; sync must not become a dependency for core value.
+- **5 before 6:** export/delete/encryption must account for the sync/tombstone path.
+
+---
+
+## Historical note (original roadmap numbering)
+
+An earlier draft of this file numbered **Sprint 3 = Suggestion Engine** and **Sprint 4 = Semantic Search**. Product Sprint 3 executed Search instead; Suggestion Engine is now Sprint 4. Frozen sprint markdown under `SPRINT2*.md` may still mention the old order — follow this file + `CURSOR_HANDOFF.md` for the live sequence.

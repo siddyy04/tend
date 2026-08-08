@@ -204,7 +204,7 @@ Capture / Confirmation / repos / validation stay model-agnostic. Collection fiel
 | `BACKLOG.md` | Deferred product/tech debt — **read for what’s parked** |
 | `FEATURES.md` | P0/P1 scope + acceptance |
 | `SCHEMA.md` | Exact data model |
-| `DEVELOPMENT_ROADMAP.md` | Sprint sequence |
+| `DEVELOPMENT_ROADMAP.md` | Living sprint sequence + status (Search = 3 done; Suggestion Engine = 4 next) |
 | `DEVLOG.md` | Human progress notes |
 | `CHANGELOG.md` | User-visible changes |
 | `EVALUATION_TEST.md` | Capture / extraction eval notes |
